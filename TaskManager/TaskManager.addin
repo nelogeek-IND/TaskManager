@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RevitAddIns>
+	<AddIn Type="Command">
+		<Text>Command TaskManager_TaskManagerPanel</Text>
+		<Description>Some description for TaskManager_TaskManagerPanel</Description>
+		<Assembly>TaskManager.dll</Assembly>
+		<FullClassName>TaskManager.TaskManagerPanel.Command</FullClassName>
+		<ClientId>fbe1c23d-5a97-4ddd-9223-bf2b6803eb5a</ClientId>
+		<VendorId>Khadour, Vasim. IND Architects</VendorId>
+		<VendorDescription>Khadour, Vasim. Dynamic labs, CTO, +79032259176</VendorDescription>
+	</AddIn>
+	<AddIn Type="Application">
+		<Name>Application TaskManager</Name>
+		<Assembly>TaskManager.dll</Assembly>
+		<FullClassName>TaskManager.App</FullClassName>
+		<ClientId>f1a0b548-6dc0-41a7-9cea-672179dd952a</ClientId>
+		<VendorId>Khadour, Vasim. IND Architects</VendorId>
+		<VendorDescription>Khadour, Vasim. Dynamic labs, CTO, +79032259176</VendorDescription>
+	</AddIn>
+</RevitAddIns>
