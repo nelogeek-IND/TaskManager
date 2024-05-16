@@ -72,7 +72,7 @@ namespace TaskManager.TaskManagerPanel
             }
             catch (Exception ex)
             {
-                // Обработка ошибок
+
             }
         }
 
