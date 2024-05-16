@@ -55,6 +55,7 @@
   <ItemGroup>
     <Compile Include="App.cs" />
     <Compile Include="Command.cs" />
+    <Compile Include="Helpers\CaptureWindow.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Shared\CaseConverter.cs" />
     <Compile Include="Shared\RelayCommand.cs" />
@@ -144,5 +145,6 @@
     <Content Include="Resources\unlock.png" />
     <Content Include="Resources\up.png" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

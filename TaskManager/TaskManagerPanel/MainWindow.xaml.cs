@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media.Imaging;
+using TaskManager.Helpers;
 
 namespace TaskManager.TaskManagerPanel
 {
@@ -27,48 +28,55 @@ namespace TaskManager.TaskManagerPanel
         {
             try
             {
-                // Получаем размеры экрана
-                Rectangle screenBounds = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
 
-                // Создаем Bitmap для сохранения скриншота
-                using (Bitmap screenshot = new Bitmap(screenBounds.Width, screenBounds.Height))
-                {
-                    // Создаем объект Graphics из скриншота
-                    using (Graphics graphics = Graphics.FromImage(screenshot))
-                    {
-                        // Заполняем Bitmap содержимым экрана
-                        graphics.CopyFromScreen(screenBounds.Location, System.Drawing.Point.Empty, screenBounds.Size);
-                    }
+                // Создаем и показываем окно захвата экрана
+                CaptureWindow captureWindow = new CaptureWindow();
+                captureWindow.ShowDialog();
 
-                    // Создаем BitmapImage из скриншота
-                    BitmapImage bitmapImage = ConvertBitmapToBitmapImage(screenshot);
 
-                    // Добавляем BitmapImage в список скриншотов
-                    screenshots.Add(bitmapImage);
 
-                    // Получаем FlowDocumentReader внутри Grid
-                    var flowDocumentReader = (FlowDocumentReader)ReaderView.Children[0];
+                //// Получаем размеры экрана
+                //Rectangle screenBounds = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
 
-                    // Создаем новый FlowDocument
-                    FlowDocument flowDocument = new FlowDocument();
+                //// Создаем Bitmap для сохранения скриншота
+                //using (Bitmap screenshot = new Bitmap(screenBounds.Width, screenBounds.Height))
+                //{
+                //    // Создаем объект Graphics из скриншота
+                //    using (Graphics graphics = Graphics.FromImage(screenshot))
+                //    {
+                //        // Заполняем Bitmap содержимым экрана
+                //        graphics.CopyFromScreen(screenBounds.Location, System.Drawing.Point.Empty, screenBounds.Size);
+                //    }
 
-                    // Создаем новый Paragraph с изображением и описанием
-                    Paragraph paragraph = new Paragraph();
+                //    // Создаем BitmapImage из скриншота
+                //    BitmapImage bitmapImage = ConvertBitmapToBitmapImage(screenshot);
 
-                    // Добавляем изображение
-                    System.Windows.Controls.Image image = new System.Windows.Controls.Image();
-                    image.Source = bitmapImage;
-                    paragraph.Inlines.Add(image);
+                //    // Добавляем BitmapImage в список скриншотов
+                //    screenshots.Add(bitmapImage);
 
-                    // Добавляем описание
-                    paragraph.Inlines.Add(new Run("Your description goes here"));
+                //    // Получаем FlowDocumentReader внутри Grid
+                //    var flowDocumentReader = (FlowDocumentReader)ReaderView.Children[0];
 
-                    // Добавляем Paragraph в FlowDocument
-                    flowDocument.Blocks.Add(paragraph);
+                //    // Создаем новый FlowDocument
+                //    FlowDocument flowDocument = new FlowDocument();
 
-                    // Устанавливаем FlowDocument в качестве содержимого FlowDocumentReader
-                    flowDocumentReader.Document = flowDocument;
-                }
+                //    // Создаем новый Paragraph с изображением и описанием
+                //    Paragraph paragraph = new Paragraph();
+
+                //    // Добавляем изображение
+                //    System.Windows.Controls.Image image = new System.Windows.Controls.Image();
+                //    image.Source = bitmapImage;
+                //    paragraph.Inlines.Add(image);
+
+                //    // Добавляем описание
+                //    paragraph.Inlines.Add(new Run("Your description goes here"));
+
+                //    // Добавляем Paragraph в FlowDocument
+                //    flowDocument.Blocks.Add(paragraph);
+
+                //    // Устанавливаем FlowDocument в качестве содержимого FlowDocumentReader
+                //    flowDocumentReader.Document = flowDocument;
+
             }
             catch (Exception ex)
             {
