@@ -31,42 +31,41 @@ namespace TaskManager.TaskManagerPanel
         {
             try
             {
-
                 // Создаем новое окно захвата
                 CaptureWindow captureWindow = new CaptureWindow();
-                captureWindow.ShowDialog();
-
-                // Получаем точки и масштаб выделенной области
-                var startPoint = captureWindow.StartPoint;
-                var endPoint = captureWindow.EndPoint;
-                var scale = captureWindow.Scale;
-
-                // Получаем размеры выделенной области
-                int width = (int)Math.Abs(endPoint.X - startPoint.X);
-                int height = (int)Math.Abs(endPoint.Y - startPoint.Y);
-
-                // Создаем Bitmap для сохранения скриншота
-                using (Bitmap screenshot = new Bitmap(width, height))
+                if (captureWindow.ShowDialog() == true)
                 {
-                    using (Graphics graphics = Graphics.FromImage(screenshot))
+                    // Получаем точки и масштаб выделенной области
+                    var startPoint = captureWindow.StartPoint;
+                    var endPoint = captureWindow.EndPoint;
+
+                    // Получаем размеры выделенной области
+                    int width = (int)Math.Abs(endPoint.X - startPoint.X);
+                    int height = (int)Math.Abs(endPoint.Y - startPoint.Y);
+
+                    // Создаем Bitmap для сохранения скриншота
+                    using (Bitmap screenshot = new Bitmap(width, height))
                     {
-                        graphics.CopyFromScreen((int)startPoint.X, (int)startPoint.Y, 0, 0, new System.Drawing.Size(width, height));
+                        using (Graphics graphics = Graphics.FromImage(screenshot))
+                        {
+                            graphics.CopyFromScreen((int)startPoint.X, (int)startPoint.Y, 0, 0, new System.Drawing.Size(width, height));
+                        }
+
+                        BitmapImage bitmapImage = ConvertBitmapToBitmapImage(screenshot);
+                        screenshots.Add(bitmapImage);
+
+                        FlowDocument flowDocument = new FlowDocument();
+                        Paragraph paragraph = new Paragraph();
+
+                        System.Windows.Controls.Image image = new System.Windows.Controls.Image();
+                        image.Source = bitmapImage;
+                        paragraph.Inlines.Add(image);
+
+                        paragraph.Inlines.Add(new Run("Описание вашего скриншота"));
+
+                        flowDocument.Blocks.Add(paragraph);
+                        FlowDocReader.Document = flowDocument;
                     }
-
-                    BitmapImage bitmapImage = ConvertBitmapToBitmapImage(screenshot);
-                    screenshots.Add(bitmapImage);
-
-                    FlowDocument flowDocument = new FlowDocument();
-                    Paragraph paragraph = new Paragraph();
-
-                    System.Windows.Controls.Image image = new System.Windows.Controls.Image();
-                    image.Source = bitmapImage;
-                    paragraph.Inlines.Add(image);
-
-                    paragraph.Inlines.Add(new Run("Описание вашего скриншота"));
-
-                    flowDocument.Blocks.Add(paragraph);
-                    FlowDocReader.Document = flowDocument;
                 }
 
 
