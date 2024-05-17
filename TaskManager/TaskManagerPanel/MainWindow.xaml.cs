@@ -29,7 +29,6 @@ namespace TaskManager.TaskManagerPanel
 
         private void PrintScreen(object sender, RoutedEventArgs e)
         {
-            // Работает на основном мониторе (на втором не работает)
             try
             {
                 // Определяем монитор, на котором открыт Revit
@@ -59,25 +58,35 @@ namespace TaskManager.TaskManagerPanel
                         BitmapImage bitmapImage = ConvertBitmapToBitmapImage(screenshot);
                         screenshots.Add(bitmapImage);
 
-                        // Создаем новый Image элемент
-                        System.Windows.Controls.Image imageControl = new System.Windows.Controls.Image();
-                        imageControl.Source = bitmapImage;
-                        imageControl.Margin = new Thickness(5);
+                        // Создаем новый параграф с изображением
+                        Paragraph paragraph = new Paragraph();
+                        System.Windows.Controls.Image image = new System.Windows.Controls.Image();
+                        image.Source = bitmapImage;
+                        image.Width = 300; // Устанавливаем ширину изображения, если необходимо
+                        image.Margin = new Thickness(5);
+                        paragraph.Inlines.Add(image);
 
-                        // Добавляем Image элемент в StackPanel под кнопкой
-                        ScreenshotsContainer.Children.Add(imageControl);
+                        // Добавляем описание к изображению
+                        paragraph.Inlines.Add(new Run("Описание вашего скриншота"));
+
+                        // Добавляем параграф в FlowDocument
+                        FlowDocument flowDocument = FlowDocReader.Document as FlowDocument;
+                        if (flowDocument == null)
+                        {
+                            flowDocument = new FlowDocument();
+                            FlowDocReader.Document = flowDocument;
+                        }
+                        flowDocument.Blocks.Add(paragraph);
                     }
                 }
                 else
                 {
                     System.Windows.MessageBox.Show("Захват области был отменен.");
                 }
-
-
             }
             catch (Exception ex)
             {
-
+                System.Windows.MessageBox.Show($"Произошла ошибка: {ex.Message}");
             }
         }
 
