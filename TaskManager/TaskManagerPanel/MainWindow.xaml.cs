@@ -6,11 +6,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Net;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Forms;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Media.Media3D;
 using TaskManager.Helpers;
@@ -41,9 +43,15 @@ namespace TaskManager.TaskManagerPanel
                 CaptureWindow captureWindow = new CaptureWindow(revitHandle);
                 if (captureWindow.ShowDialog() == true)
                 {
+                    // Убедимся, что StartPoint всегда меньше EndPoint
+                    double[] tempX = { captureWindow.StartPoint.X, captureWindow.EndPoint.X };
+                    double[] tempY = { captureWindow.StartPoint.Y, captureWindow.EndPoint.Y };
+                    Array.Sort(tempX);
+                    Array.Sort(tempY);
+
                     // Получаем точки выделенной области
-                    var startPoint = captureWindow.StartPoint;
-                    var endPoint = captureWindow.EndPoint;
+                    var startPoint = new System.Windows.Point(tempX[0], tempY[0]);
+                    var endPoint = new System.Windows.Point(tempX[1], tempY[1]);
 
                     // Получаем размеры выделенной области
                     int width = (int)Math.Abs(endPoint.X - startPoint.X);
@@ -67,7 +75,29 @@ namespace TaskManager.TaskManagerPanel
                         {
                             using (Graphics graphics = Graphics.FromImage(screenshot))
                             {
+                                // Снимок экрана
                                 graphics.CopyFromScreen((int)startPoint.X, (int)startPoint.Y, 0, 0, new System.Drawing.Size(width, height));
+                            }
+
+                            
+
+                            // Рисование содержимого InkCanvas на Bitmap
+                            RenderTargetBitmap renderBitmap = new RenderTargetBitmap(width, height, 96d, 96d, PixelFormats.Default);
+                            renderBitmap.Render(captureWindow.inkCanvas);
+
+                            using (MemoryStream stream = new MemoryStream())
+                            {
+                                BitmapEncoder encoder = new PngBitmapEncoder();
+                                encoder.Frames.Add(BitmapFrame.Create(renderBitmap));
+                                encoder.Save(stream);
+
+                                using (Bitmap inkCanvasBitmap = new Bitmap(stream))
+                                {
+                                    using (Graphics graphics = Graphics.FromImage(screenshot))
+                                    {
+                                        graphics.DrawImage(inkCanvasBitmap, 0, 0, width, height);
+                                    }
+                                }
                             }
 
                             BitmapImage bitmapImage = ConvertBitmapToBitmapImage(screenshot);
@@ -77,7 +107,7 @@ namespace TaskManager.TaskManagerPanel
                             Paragraph paragraph = new Paragraph();
                             System.Windows.Controls.Image image = new System.Windows.Controls.Image();
                             image.Source = bitmapImage;
-                            //image.Width = 300; // Устанавливаем ширину изображения, если необходимо
+                            image.Width = 300; // Устанавливаем ширину изображения, если необходимо
                             image.Margin = new Thickness(5);
                             paragraph.Inlines.Add(image);
 
@@ -109,6 +139,7 @@ namespace TaskManager.TaskManagerPanel
                 System.Windows.MessageBox.Show($"Произошла ошибка: {ex.Message}");
             }
         }
+
 
         private Bitmap CaptureScreenArea(XYZ startPoint, XYZ endPoint, double width, double height)
         {
