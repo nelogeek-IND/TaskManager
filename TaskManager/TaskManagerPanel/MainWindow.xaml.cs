@@ -3,20 +3,20 @@ using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Selection;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
+using System.Windows.Forms;
 using System.Windows.Media.Imaging;
 using TaskManager.Helpers;
 
 
 namespace TaskManager.TaskManagerPanel
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
+    
     public partial class MainWindow : Page, IDockablePaneProvider
     {
         private List<BitmapImage> screenshots = new List<BitmapImage>();
@@ -29,13 +29,18 @@ namespace TaskManager.TaskManagerPanel
 
         private void PrintScreen(object sender, RoutedEventArgs e)
         {
+            // Работает на основном мониторе (на втором не работает)
             try
             {
-                // Создаем новое окно захвата
-                CaptureWindow captureWindow = new CaptureWindow();
+                // Определяем монитор, на котором открыт Revit
+                IntPtr revitHandle = Process.GetCurrentProcess().MainWindowHandle;
+                var revitScreen = Screen.FromHandle(revitHandle);
+
+                // Создаем новое окно захвата, ограниченное монитором с Revit
+                CaptureWindow captureWindow = new CaptureWindow(revitScreen);
                 if (captureWindow.ShowDialog() == true)
                 {
-                    // Получаем точки и масштаб выделенной области
+                    // Получаем точки выделенной области
                     var startPoint = captureWindow.StartPoint;
                     var endPoint = captureWindow.EndPoint;
 
@@ -54,79 +59,28 @@ namespace TaskManager.TaskManagerPanel
                         BitmapImage bitmapImage = ConvertBitmapToBitmapImage(screenshot);
                         screenshots.Add(bitmapImage);
 
-                        FlowDocument flowDocument = new FlowDocument();
-                        Paragraph paragraph = new Paragraph();
+                        // Создаем новый Image элемент
+                        System.Windows.Controls.Image imageControl = new System.Windows.Controls.Image();
+                        imageControl.Source = bitmapImage;
+                        imageControl.Margin = new Thickness(5);
 
-                        System.Windows.Controls.Image image = new System.Windows.Controls.Image();
-                        image.Source = bitmapImage;
-                        paragraph.Inlines.Add(image);
-
-                        paragraph.Inlines.Add(new Run("Описание вашего скриншота"));
-
-                        flowDocument.Blocks.Add(paragraph);
-                        FlowDocReader.Document = flowDocument;
+                        // Добавляем Image элемент в StackPanel под кнопкой
+                        ScreenshotsContainer.Children.Add(imageControl);
                     }
                 }
-
-
-                    //------------------------------
-
-
-                    //// Создаем и показываем окно захвата экрана
-                    //CaptureWindow captureWindow = new CaptureWindow();
-                    //captureWindow.Owner = Window.GetWindow(this);
-                    //captureWindow.Show();
-
-                    //----------------------------------
-
-                    //// Получаем размеры экрана
-                    //Rectangle screenBounds = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
-
-                    //// Создаем Bitmap для сохранения скриншота
-                    //using (Bitmap screenshot = new Bitmap(screenBounds.Width, screenBounds.Height))
-                    //{
-                    //    // Создаем объект Graphics из скриншота
-                    //    using (Graphics graphics = Graphics.FromImage(screenshot))
-                    //    {
-                    //        // Заполняем Bitmap содержимым экрана
-                    //        graphics.CopyFromScreen(screenBounds.Location, System.Drawing.Point.Empty, screenBounds.Size);
-                    //    }
-
-                    //    // Создаем BitmapImage из скриншота
-                    //    BitmapImage bitmapImage = ConvertBitmapToBitmapImage(screenshot);
-
-                    //    // Добавляем BitmapImage в список скриншотов
-                    //    screenshots.Add(bitmapImage);
-
-                    //    // Получаем FlowDocumentReader внутри Grid
-                    //    var flowDocumentReader = (FlowDocumentReader)ReaderView.Children[0];
-
-                    //    // Создаем новый FlowDocument
-                    //    FlowDocument flowDocument = new FlowDocument();
-
-                    //    // Создаем новый Paragraph с изображением и описанием
-                    //    Paragraph paragraph = new Paragraph();
-
-                    //    // Добавляем изображение
-                    //    System.Windows.Controls.Image image = new System.Windows.Controls.Image();
-                    //    image.Source = bitmapImage;
-                    //    paragraph.Inlines.Add(image);
-
-                    //    // Добавляем описание
-                    //    paragraph.Inlines.Add(new Run("Your description goes here"));
-
-                    //    // Добавляем Paragraph в FlowDocument
-                    //    flowDocument.Blocks.Add(paragraph);
-
-                    //    // Устанавливаем FlowDocument в качестве содержимого FlowDocumentReader
-                    //    flowDocumentReader.Document = flowDocument;
-
+                else
+                {
+                    System.Windows.MessageBox.Show("Захват области был отменен.");
                 }
+
+
+            }
             catch (Exception ex)
             {
 
             }
         }
+
         private Bitmap CaptureScreenArea(XYZ startPoint, XYZ endPoint, double width, double height)
         {
             // Преобразуем точки в координаты экрана
