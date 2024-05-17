@@ -6,6 +6,8 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Forms;
+using System.Runtime.InteropServices;
+using System.Diagnostics;
 
 namespace TaskManager.Helpers
 {
@@ -14,16 +16,16 @@ namespace TaskManager.Helpers
         private Point startPoint;
         private Rectangle selectionRectangle;
         private InkCanvas inkCanvas;
-        private Screen revitScreen;
+        private IntPtr revitHandle;
 
         public Point StartPoint { get; private set; }
         public Point EndPoint { get; private set; }
 
-        public CaptureWindow(Screen revitScreen)
+        public CaptureWindow(IntPtr revitHandle)
         {
             InitializeComponent();
 
-            this.revitScreen = revitScreen;
+            this.revitHandle = revitHandle;
 
             selectionRectangle = new Rectangle
             {
@@ -47,11 +49,18 @@ namespace TaskManager.Helpers
             DrawingCanvas.Children.Add(inkCanvas);
             DrawingCanvas.Children.Add(selectionRectangle);
 
-            // Устанавливаем окно, чтобы оно покрывало только монитор с Revit
-            this.Left = revitScreen.Bounds.Left;
-            this.Top = revitScreen.Bounds.Top;
-            this.Width = revitScreen.Bounds.Width;
-            this.Height = revitScreen.Bounds.Height;
+
+            // Получаем размеры окна Revit
+            revitHandle = Process.GetCurrentProcess().MainWindowHandle;
+            RECT revitWindowRect;
+            if (GetWindowRect(revitHandle, out revitWindowRect))
+            {
+                // Позиционируем окно захвата относительно окна Revit
+                this.Left = revitWindowRect.Left;
+                this.Top = revitWindowRect.Top;
+                this.Width = revitWindowRect.Right - revitWindowRect.Left;
+                this.Height = revitWindowRect.Bottom - revitWindowRect.Top;
+            }
         }
 
         private void Window_MouseDown(object sender, MouseButtonEventArgs e)
@@ -87,5 +96,21 @@ namespace TaskManager.Helpers
             DialogResult = true;
             Close();
         }
+
+        // Структура RECT для хранения координат прямоугольника окна
+        [Serializable]
+        [StructLayout(LayoutKind.Sequential)]
+        public struct RECT
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
+
+        // Импорт функции GetWindowRect из user32.dll для получения размеров окна по дескриптору
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
     }
 }

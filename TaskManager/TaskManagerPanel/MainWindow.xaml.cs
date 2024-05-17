@@ -6,17 +6,20 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Forms;
 using System.Windows.Media.Imaging;
+using System.Windows.Media.Media3D;
 using TaskManager.Helpers;
+using static TaskManager.Helpers.CaptureWindow;
 
 
 namespace TaskManager.TaskManagerPanel
 {
-    
+
     public partial class MainWindow : Page, IDockablePaneProvider
     {
         private List<BitmapImage> screenshots = new List<BitmapImage>();
@@ -31,12 +34,11 @@ namespace TaskManager.TaskManagerPanel
         {
             try
             {
-                // Определяем монитор, на котором открыт Revit
+                // Получаем дескриптор окна Revit
                 IntPtr revitHandle = Process.GetCurrentProcess().MainWindowHandle;
-                var revitScreen = Screen.FromHandle(revitHandle);
 
-                // Создаем новое окно захвата, ограниченное монитором с Revit
-                CaptureWindow captureWindow = new CaptureWindow(revitScreen);
+                // Создаем новое окно захвата, ограниченное окном Revit
+                CaptureWindow captureWindow = new CaptureWindow(revitHandle);
                 if (captureWindow.ShowDialog() == true)
                 {
                     // Получаем точки выделенной области
@@ -47,36 +49,54 @@ namespace TaskManager.TaskManagerPanel
                     int width = (int)Math.Abs(endPoint.X - startPoint.X);
                     int height = (int)Math.Abs(endPoint.Y - startPoint.Y);
 
-                    // Создаем Bitmap для сохранения скриншота
-                    using (Bitmap screenshot = new Bitmap(width, height))
+                    // Получаем координаты окна Revit
+                    RECT revitWindowRect;
+                    if (GetWindowRect(revitHandle, out revitWindowRect))
                     {
-                        using (Graphics graphics = Graphics.FromImage(screenshot))
+                        int revitLeft = revitWindowRect.Left;
+                        int revitTop = revitWindowRect.Top;
+
+                        // Корректируем координаты выделенной области относительно окна Revit
+                        startPoint.X += revitLeft;
+                        startPoint.Y += revitTop;
+                        endPoint.X = startPoint.X + width;
+                        endPoint.Y = startPoint.Y + height;
+
+                        // Создаем Bitmap для сохранения скриншота
+                        using (Bitmap screenshot = new Bitmap(width, height))
                         {
-                            graphics.CopyFromScreen((int)startPoint.X, (int)startPoint.Y, 0, 0, new System.Drawing.Size(width, height));
+                            using (Graphics graphics = Graphics.FromImage(screenshot))
+                            {
+                                graphics.CopyFromScreen((int)startPoint.X, (int)startPoint.Y, 0, 0, new System.Drawing.Size(width, height));
+                            }
+
+                            BitmapImage bitmapImage = ConvertBitmapToBitmapImage(screenshot);
+                            screenshots.Add(bitmapImage);
+
+                            // Создаем новый параграф с изображением
+                            Paragraph paragraph = new Paragraph();
+                            System.Windows.Controls.Image image = new System.Windows.Controls.Image();
+                            image.Source = bitmapImage;
+                            //image.Width = 300; // Устанавливаем ширину изображения, если необходимо
+                            image.Margin = new Thickness(5);
+                            paragraph.Inlines.Add(image);
+
+                            // Добавляем описание к изображению
+                            paragraph.Inlines.Add(new Run("Описание вашего скриншота"));
+
+                            // Добавляем параграф в FlowDocument
+                            FlowDocument flowDocument = FlowDocReader.Document as FlowDocument;
+                            if (flowDocument == null)
+                            {
+                                flowDocument = new FlowDocument();
+                                FlowDocReader.Document = flowDocument;
+                            }
+                            flowDocument.Blocks.Add(paragraph);
                         }
-
-                        BitmapImage bitmapImage = ConvertBitmapToBitmapImage(screenshot);
-                        screenshots.Add(bitmapImage);
-
-                        // Создаем новый параграф с изображением
-                        Paragraph paragraph = new Paragraph();
-                        System.Windows.Controls.Image image = new System.Windows.Controls.Image();
-                        image.Source = bitmapImage;
-                        image.Width = 300; // Устанавливаем ширину изображения, если необходимо
-                        image.Margin = new Thickness(5);
-                        paragraph.Inlines.Add(image);
-
-                        // Добавляем описание к изображению
-                        paragraph.Inlines.Add(new Run("Описание вашего скриншота"));
-
-                        // Добавляем параграф в FlowDocument
-                        FlowDocument flowDocument = FlowDocReader.Document as FlowDocument;
-                        if (flowDocument == null)
-                        {
-                            flowDocument = new FlowDocument();
-                            FlowDocReader.Document = flowDocument;
-                        }
-                        flowDocument.Blocks.Add(paragraph);
+                    }
+                    else
+                    {
+                        System.Windows.MessageBox.Show("Не удалось получить размеры окна Revit.");
                     }
                 }
                 else
@@ -136,5 +156,22 @@ namespace TaskManager.TaskManagerPanel
                 TabBehind = DockablePanes.BuiltInDockablePanes.ProjectBrowser
             };
         }
+
+
+        // Структура RECT для хранения координат прямоугольника окна
+        [Serializable]
+        [StructLayout(LayoutKind.Sequential)]
+        public struct RECT
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
+
+        // Импорт функции GetWindowRect из user32.dll для получения размеров окна по дескриптору
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
     }
 }
