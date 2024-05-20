@@ -101,17 +101,18 @@ namespace TaskManager.TaskManagerPanel
                         BitmapImage bitmapImage = ConvertBitmapToBitmapImage(screenshot);
                         screenshots.Add(bitmapImage);
 
-                        // Создаем новый параграф с изображением
+                        // Получаем описание из DescriptionTextBox
+                        string description = DiscriptionTextBox.Text;
+
+                        // Создаем новый параграф с изображением и описанием
                         Paragraph paragraph = new Paragraph();
                         System.Windows.Controls.Image image = new System.Windows.Controls.Image();
                         image.Source = bitmapImage;
-                        //image.Width = 300; // Устанавливаем ширину изображения
-                        //image.Stretch = Stretch.Uniform; // Пропорциональное сжатие
                         image.Margin = new Thickness(5);
                         paragraph.Inlines.Add(image);
 
                         // Добавляем описание к изображению
-                        paragraph.Inlines.Add(new Run("Описание вашего скриншота"));
+                        paragraph.Inlines.Add(new Run(description));
 
                         // Добавляем параграф в FlowDocument
                         FlowDocument flowDocument = FlowDocReader.Document as FlowDocument;
@@ -121,6 +122,9 @@ namespace TaskManager.TaskManagerPanel
                             FlowDocReader.Document = flowDocument;
                         }
                         flowDocument.Blocks.Add(paragraph);
+
+                        // Очищаем поле описания
+                        DiscriptionTextBox.Clear();
                     }
                     else
                     {
@@ -137,7 +141,6 @@ namespace TaskManager.TaskManagerPanel
                 System.Windows.MessageBox.Show($"Произошла ошибка: {ex.Message}");
             }
         }
-
 
 
         private Bitmap BitmapFromBitmapSource(BitmapSource bitmapSource)
@@ -200,5 +203,10 @@ namespace TaskManager.TaskManagerPanel
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+        private void TextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+
+        }
     }
 }
