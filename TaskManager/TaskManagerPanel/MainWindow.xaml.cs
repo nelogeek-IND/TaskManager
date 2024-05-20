@@ -71,58 +71,56 @@ namespace TaskManager.TaskManagerPanel
                         endPoint.Y = startPoint.Y + height;
 
                         // Создаем Bitmap для сохранения скриншота
-                        using (Bitmap screenshot = new Bitmap(width, height))
+                        Bitmap screenshot = new Bitmap(width, height);
+                        using (Graphics graphics = Graphics.FromImage(screenshot))
                         {
-                            using (Graphics graphics = Graphics.FromImage(screenshot))
-                            {
-                                // Снимок экрана
-                                graphics.CopyFromScreen((int)startPoint.X, (int)startPoint.Y, 0, 0, new System.Drawing.Size(width, height));
-                            }
-
-                            
-
-                            // Рисование содержимого InkCanvas на Bitmap
-                            RenderTargetBitmap renderBitmap = new RenderTargetBitmap(width, height, 96d, 96d, PixelFormats.Default);
-                            renderBitmap.Render(captureWindow.inkCanvas);
-
-                            using (MemoryStream stream = new MemoryStream())
-                            {
-                                BitmapEncoder encoder = new PngBitmapEncoder();
-                                encoder.Frames.Add(BitmapFrame.Create(renderBitmap));
-                                encoder.Save(stream);
-
-                                using (Bitmap inkCanvasBitmap = new Bitmap(stream))
-                                {
-                                    using (Graphics graphics = Graphics.FromImage(screenshot))
-                                    {
-                                        graphics.DrawImage(inkCanvasBitmap, 0, 0, width, height);
-                                    }
-                                }
-                            }
-
-                            BitmapImage bitmapImage = ConvertBitmapToBitmapImage(screenshot);
-                            screenshots.Add(bitmapImage);
-
-                            // Создаем новый параграф с изображением
-                            Paragraph paragraph = new Paragraph();
-                            System.Windows.Controls.Image image = new System.Windows.Controls.Image();
-                            image.Source = bitmapImage;
-                            image.Width = 300; // Устанавливаем ширину изображения, если необходимо
-                            image.Margin = new Thickness(5);
-                            paragraph.Inlines.Add(image);
-
-                            // Добавляем описание к изображению
-                            paragraph.Inlines.Add(new Run("Описание вашего скриншота"));
-
-                            // Добавляем параграф в FlowDocument
-                            FlowDocument flowDocument = FlowDocReader.Document as FlowDocument;
-                            if (flowDocument == null)
-                            {
-                                flowDocument = new FlowDocument();
-                                FlowDocReader.Document = flowDocument;
-                            }
-                            flowDocument.Blocks.Add(paragraph);
+                            // Снимок экрана
+                            graphics.CopyFromScreen((int)startPoint.X, (int)startPoint.Y, 0, 0, new System.Drawing.Size(width, height));
                         }
+
+                        // Сохраняем содержимое InkCanvas в RenderTargetBitmap, растянутом на весь размер скриншота
+                        RenderTargetBitmap renderBitmap = new RenderTargetBitmap(width, height, 96d, 96d, PixelFormats.Default);
+                        var visual = new DrawingVisual();
+                        using (var context = visual.RenderOpen())
+                        {
+                            var brush = new VisualBrush(captureWindow.inkCanvas);
+                            context.DrawRectangle(brush, null, new Rect(new System.Windows.Point(0, 0), new System.Windows.Size(width, height)));
+                        }
+                        renderBitmap.Render(visual);
+
+                        // Преобразуем RenderTargetBitmap в Bitmap
+                        Bitmap inkCanvasBitmap = BitmapFromBitmapSource(renderBitmap);
+
+                        // Объединяем изображения
+                        using (Graphics graphics = Graphics.FromImage(screenshot))
+                        {
+                            graphics.DrawImage(inkCanvasBitmap, 0, 0, width, height);
+                        }
+
+                        // Преобразуем объединенный результат в BitmapImage
+                        BitmapImage bitmapImage = ConvertBitmapToBitmapImage(screenshot);
+                        screenshots.Add(bitmapImage);
+
+                        // Создаем новый параграф с изображением
+                        Paragraph paragraph = new Paragraph();
+                        System.Windows.Controls.Image image = new System.Windows.Controls.Image();
+                        image.Source = bitmapImage;
+                        //image.Width = 300; // Устанавливаем ширину изображения
+                        //image.Stretch = Stretch.Uniform; // Пропорциональное сжатие
+                        image.Margin = new Thickness(5);
+                        paragraph.Inlines.Add(image);
+
+                        // Добавляем описание к изображению
+                        paragraph.Inlines.Add(new Run("Описание вашего скриншота"));
+
+                        // Добавляем параграф в FlowDocument
+                        FlowDocument flowDocument = FlowDocReader.Document as FlowDocument;
+                        if (flowDocument == null)
+                        {
+                            flowDocument = new FlowDocument();
+                            FlowDocReader.Document = flowDocument;
+                        }
+                        flowDocument.Blocks.Add(paragraph);
                     }
                     else
                     {
@@ -141,24 +139,18 @@ namespace TaskManager.TaskManagerPanel
         }
 
 
-        private Bitmap CaptureScreenArea(XYZ startPoint, XYZ endPoint, double width, double height)
+
+        private Bitmap BitmapFromBitmapSource(BitmapSource bitmapSource)
         {
-            // Преобразуем точки в координаты экрана
-            System.Drawing.Point screenStartPoint = new System.Drawing.Point((int)startPoint.X, (int)startPoint.Y);
-            System.Drawing.Point screenEndPoint = new System.Drawing.Point((int)endPoint.X, (int)endPoint.Y);
-
-            // Создаем Bitmap для сохранения скриншота
-            Bitmap bitmap = new Bitmap((int)width, (int)height);
-            using (Graphics graphics = Graphics.FromImage(bitmap))
+            using (MemoryStream stream = new MemoryStream())
             {
-                // Заполняем Bitmap содержимым экрана
-                graphics.CopyFromScreen(screenStartPoint, System.Drawing.Point.Empty, new System.Drawing.Size((int)width, (int)height));
+                BitmapEncoder encoder = new PngBitmapEncoder();
+                encoder.Frames.Add(BitmapFrame.Create(bitmapSource));
+                encoder.Save(stream);
+                stream.Position = 0;
+                return new Bitmap(stream);
             }
-
-            return bitmap;
         }
-
-
 
         private BitmapImage ConvertBitmapToBitmapImage(Bitmap bitmap)
         {
@@ -176,6 +168,10 @@ namespace TaskManager.TaskManagerPanel
                 return bitmapImage;
             }
         }
+
+
+
+
 
         public void SetupDockablePane(DockablePaneProviderData data)
         {

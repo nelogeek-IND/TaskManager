@@ -39,7 +39,8 @@ namespace TaskManager.Helpers
             inkCanvas = new InkCanvas
             {
                 Visibility = Visibility.Collapsed,
-                Background = Brushes.AliceBlue, // TODO изменить на Transparent
+                Background = Brushes.Transparent, // TODO изменить на Transparent
+                
                 DefaultDrawingAttributes = new DrawingAttributes
                 {
                     Color = Colors.Red,
@@ -158,7 +159,7 @@ namespace TaskManager.Helpers
                 inkCanvas.Visibility = Visibility.Visible;
 
                 // Скрываем рамку выделения
-                selectionRectangle.Visibility = Visibility.Collapsed;
+                //selectionRectangle.Visibility = Visibility.Collapsed;
             }
             else if (e.Key == Key.Enter && isDrawing)
             {
