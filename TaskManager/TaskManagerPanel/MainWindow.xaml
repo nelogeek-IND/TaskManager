@@ -7,7 +7,6 @@
       mc:Ignorable="d"
       d:DesignHeight="1000" d:DesignWidth="410">
 
-    <!-- Move the DataTemplate inside the existing ResourceDictionary -->
     <Page.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -19,7 +18,7 @@
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <Image Grid.Column="0" Source="{Binding ImageSource}" Width="100" Height="100"/>
+                    <Image Grid.Column="0" Source="{Binding ImageSource}" Width="100" Height="100" Stretch="Uniform"/>
                     <TextBox Grid.Column="1" Text="{Binding Description}" VerticalAlignment="Center" Margin="10,0"/>
                 </Grid>
             </DataTemplate>
@@ -34,29 +33,27 @@
 
         <Border Style="{DynamicResource ContentBorder}" Padding="25,0,25,10" Grid.Row="1">
             <Grid>
-                <TextBlock Style="{DynamicResource BlockHeader}" Margin="0,15,0,0" Text="{Binding Plugin.Description, Converter={StaticResource StringToUpperConverter}}" d:Text="TASK MANAGER"/>
-                <Button Width="200px" Height="30px"  Click="PrintScreen" VerticalAlignment="Top" Content="Добавить задачу" Margin="80,43,80,0"/>
-                <StackPanel x:Name="ScreenshotsContainer" Margin="0,78,0,0"/>
-                <Grid x:Name="ReaderView" Visibility="Visible" Grid.Row="2">
-                    <FlowDocumentReader Margin="0,83,0,0">
+                <TextBlock Style="{DynamicResource BlockHeader}" Margin="0,15,0,952" Text="{Binding Plugin.Description, Converter={StaticResource StringToUpperConverter}}" d:Text="TASK MANAGER"/>
+
+                <Button Padding="8"  Click="PrintScreen" VerticalAlignment="Top" Content="Добавить задачу" HorizontalAlignment="Center" Margin="0,58,0,0"/>
+
+
+                <StackPanel x:Name="ScreenshotsContainer" Margin="0,97,0,0"/>
+                <Grid x:Name="ReaderView" Visibility="Visible" Margin="0,97,0,0">
+                    <FlowDocumentReader x:Name="FlowDocReader" Margin="0,10,0,0">
                         <FlowDocumentReader.Resources>
-                            <!-- Define your paragraph style here -->
                             <Style TargetType="Paragraph">
                                 <Setter Property="Foreground" Value="{StaticResource Bold}"/>
                                 <Setter Property="FontSize" Value="12"/>
                                 <Setter Property="FontFamily" Value="{StaticResource ApercuMono}"/>
-                                <!-- Add more setters as needed -->
                             </Style>
                         </FlowDocumentReader.Resources>
-                        <FlowDocumentReader.Document >
-
-                            <!-- Bind to the FlowDocument created in code-behind -->
+                        <FlowDocumentReader.Document>
                             <Binding Path="flowdocument"/>
                         </FlowDocumentReader.Document>
                     </FlowDocumentReader>
                 </Grid>
             </Grid>
-            
         </Border>
     </Grid>
 </Page>
