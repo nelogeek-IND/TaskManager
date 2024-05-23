@@ -36,7 +36,7 @@
                 <TextBlock x:Name="LabelPanel" Style="{DynamicResource BlockHeader}" Margin="0,15,0,0" d:Text="TASK MANAGER" VerticalAlignment="Top"/>
 
                 <Button Padding="8"  Click="PrintScreen" VerticalAlignment="Top" Content="Add task" HorizontalAlignment="Center" Margin="0,97,0,0"/>
-                <TextBox x:Name="DiscriptionTextBox"  Margin="0,46,0,0" ToolTip="Description" TextChanged="TextBox_TextChanged" Height="40" VerticalAlignment="Top" Background="#FFF11A1A"/>
+                <TextBox x:Name="DiscriptionTextBox"  Margin="0,46,0,0" ToolTip="Description"  Height="40" VerticalAlignment="Top" Background="#FFF11A1A"/>
                 <StackPanel x:Name="ScreenshotsContainer" Margin="0,97,0,0"/>
                 <Grid x:Name="ReaderView" Visibility="Visible" Margin="0,136,0,0">
                     <FlowDocumentReader x:Name="FlowDocReader" Margin="0,23,0,0">

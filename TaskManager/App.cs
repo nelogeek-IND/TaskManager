@@ -1,9 +1,5 @@
 ﻿using Autodesk.Revit.UI;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using TaskManager.TaskManagerPanel;
 
 namespace TaskManager
@@ -15,8 +11,13 @@ namespace TaskManager
         public Result OnStartup(UIControlledApplication a)
         {
             var TaskManagerPanelViewModel = new ViewModel();
-            //stempsHelpPaneViewModel.flowdocument = CreateFlowDocument();
-            a.RegisterDockablePane(TaskManagerPanel, "Task Manager Pane", new MainWindow(TaskManagerPanelViewModel));
+            a.RegisterDockablePane(TaskManagerPanel, "Task Manager Pane", new MainWindow(TaskManagerPanelViewModel, null));
+
+            // Создание панели и добавление кнопки
+            RibbonPanel panel = a.CreateRibbonPanel("Task Manager");
+            PushButtonData buttonData = new PushButtonData("OpenTaskManager", "Open Task Manager", typeof(App).Assembly.Location, "TaskManager.TaskManagerPanel.Command");
+            panel.AddItem(buttonData);
+
             return Result.Succeeded;
         }
 
@@ -24,7 +25,5 @@ namespace TaskManager
         {
             return Result.Succeeded;
         }
-
-       
     }
 }

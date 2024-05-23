@@ -1,21 +1,18 @@
 ﻿using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
-using Autodesk.Revit.UI.Selection;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
-using System.Net;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
-using System.Windows.Forms;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Media.Media3D;
 using TaskManager.Helpers;
+using TaskManager.Models;
 using static TaskManager.Helpers.CaptureWindow;
 
 
@@ -24,97 +21,103 @@ namespace TaskManager.TaskManagerPanel
 
     public partial class MainWindow : Page, IDockablePaneProvider
     {
-        private List<BitmapImage> screenshots = new List<BitmapImage>();
+        private List<ScreenshotInfo> screenshots = new List<ScreenshotInfo>();
+        private ExternalCommandData _commandData;
 
-        public MainWindow(ViewModel vm)
+        public MainWindow(ViewModel vm, ExternalCommandData commandData)
         {
             InitializeComponent();
             DataContext = vm;
+            _commandData = commandData;
         }
 
         private void PrintScreen(object sender, RoutedEventArgs e)
         {
             try
             {
-                // Получаем дескриптор окна Revit
                 IntPtr revitHandle = Process.GetCurrentProcess().MainWindowHandle;
-
-                // Создаем новое окно захвата, ограниченное окном Revit
                 CaptureWindow captureWindow = new CaptureWindow(revitHandle);
                 if (captureWindow.ShowDialog() == true)
                 {
-                    // Убедимся, что StartPoint всегда меньше EndPoint
                     double[] tempX = { captureWindow.StartPoint.X, captureWindow.EndPoint.X };
                     double[] tempY = { captureWindow.StartPoint.Y, captureWindow.EndPoint.Y };
                     Array.Sort(tempX);
                     Array.Sort(tempY);
 
-                    // Получаем точки выделенной области
                     var startPoint = new System.Windows.Point(tempX[0], tempY[0]);
                     var endPoint = new System.Windows.Point(tempX[1], tempY[1]);
 
-                    // Получаем размеры выделенной области
                     int width = (int)Math.Abs(endPoint.X - startPoint.X);
                     int height = (int)Math.Abs(endPoint.Y - startPoint.Y);
 
-                    // Получаем координаты окна Revit
                     RECT revitWindowRect;
                     if (GetWindowRect(revitHandle, out revitWindowRect))
                     {
                         int revitLeft = revitWindowRect.Left;
                         int revitTop = revitWindowRect.Top;
 
-                        // Корректируем координаты выделенной области относительно окна Revit
                         startPoint.X += revitLeft;
                         startPoint.Y += revitTop;
                         endPoint.X = startPoint.X + width;
                         endPoint.Y = startPoint.Y + height;
 
-                        // Создаем Bitmap для сохранения скриншота
                         Bitmap screenshot = new Bitmap(width, height);
                         using (Graphics graphics = Graphics.FromImage(screenshot))
                         {
-                            // Снимок экрана
                             graphics.CopyFromScreen((int)startPoint.X, (int)startPoint.Y, 0, 0, new System.Drawing.Size(width, height));
                         }
 
-                        // Сохраняем содержимое InkCanvas в RenderTargetBitmap, растянутом на весь размер скриншота
-                        RenderTargetBitmap renderBitmap = new RenderTargetBitmap(width, height, 96d, 96d, PixelFormats.Default);
+                        RenderTargetBitmap inkCanvasRenderBitmap = new RenderTargetBitmap(width, height, 96d, 96d, PixelFormats.Default);
                         var visual = new DrawingVisual();
                         using (var context = visual.RenderOpen())
                         {
                             var brush = new VisualBrush(captureWindow.inkCanvas);
                             context.DrawRectangle(brush, null, new Rect(new System.Windows.Point(0, 0), new System.Windows.Size(width, height)));
                         }
-                        renderBitmap.Render(visual);
+                        inkCanvasRenderBitmap.Render(visual);
 
-                        // Преобразуем RenderTargetBitmap в Bitmap
-                        Bitmap inkCanvasBitmap = BitmapFromBitmapSource(renderBitmap);
+                        Bitmap inkCanvasBitmap = BitmapFromBitmapSource(inkCanvasRenderBitmap);
+                        BitmapImage inkCanvasImage = ConvertBitmapToBitmapImage(inkCanvasBitmap);
 
-                        // Объединяем изображения
-                        using (Graphics graphics = Graphics.FromImage(screenshot))
+                        // Combine screenshot with InkCanvas
+                        Bitmap combinedBitmap = new Bitmap(width, height);
+                        using (Graphics g = Graphics.FromImage(combinedBitmap))
                         {
-                            graphics.DrawImage(inkCanvasBitmap, 0, 0, width, height);
+                            g.DrawImage(screenshot, 0, 0);
+                            g.DrawImage(inkCanvasBitmap, 0, 0);
                         }
+                        BitmapImage bitmapImage = ConvertBitmapToBitmapImage(combinedBitmap);
 
-                        // Преобразуем объединенный результат в BitmapImage
-                        BitmapImage bitmapImage = ConvertBitmapToBitmapImage(screenshot);
-                        screenshots.Add(bitmapImage);
-
-                        // Получаем описание из DescriptionTextBox
                         string description = DiscriptionTextBox.Text;
 
-                        // Создаем новый параграф с изображением и описанием
+                        var screenshotInfo = new ScreenshotInfo
+                        {
+                            Image = bitmapImage,
+                            Description = description,
+                            StartPoint = startPoint,
+                            EndPoint = endPoint,
+                            Coordinates = GetCoordinatesFromRevit(startPoint),
+                            Scale = GetCurrentScale(),
+                            InkCanvasImage = inkCanvasImage
+                        };
+                        screenshots.Add(screenshotInfo);
+
                         Paragraph paragraph = new Paragraph();
                         System.Windows.Controls.Image image = new System.Windows.Controls.Image();
                         image.Source = bitmapImage;
                         image.Margin = new Thickness(5);
                         paragraph.Inlines.Add(image);
 
-                        // Добавляем описание к изображению
+                        System.Windows.Controls.Image image2 = new System.Windows.Controls.Image();
+                        image2.Source = inkCanvasImage;
+                        image2.Margin = new Thickness(5);
+                        paragraph.Inlines.Add(image2);
+
+                        image.MouseLeftButtonDown += (s, args) => OpenModelAtCoordinates(screenshotInfo);
+                        image2.MouseLeftButtonDown += (s, args) => OpenModelAtCoordinates(screenshotInfo);
+
                         paragraph.Inlines.Add(new Run(description));
 
-                        // Добавляем параграф в FlowDocument
                         FlowDocument flowDocument = FlowDocReader.Document as FlowDocument;
                         if (flowDocument == null)
                         {
@@ -123,25 +126,23 @@ namespace TaskManager.TaskManagerPanel
                         }
                         flowDocument.Blocks.Add(paragraph);
 
-                        // Очищаем поле описания
                         DiscriptionTextBox.Clear();
                     }
                     else
                     {
-                        System.Windows.MessageBox.Show("Не удалось получить размеры окна Revit.");
+                        MessageBox.Show("Не удалось получить размеры окна Revit.");
                     }
                 }
                 else
                 {
-                    System.Windows.MessageBox.Show("Захват области был отменен.");
+                    MessageBox.Show("Захват области был отменен.");
                 }
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"Произошла ошибка: {ex.Message}");
+                MessageBox.Show($"Произошла ошибка: {ex.Message}");
             }
         }
-
 
         private Bitmap BitmapFromBitmapSource(BitmapSource bitmapSource)
         {
@@ -172,9 +173,100 @@ namespace TaskManager.TaskManagerPanel
             }
         }
 
+        private double GetCurrentScale()
+        {
+            if (_commandData == null)
+            {
+                return 1.0;
+            }
+
+            Document doc = _commandData.Application.ActiveUIDocument.Document;
+            Autodesk.Revit.DB.View activeView = doc.ActiveView;
+
+            if (activeView.ViewType == ViewType.ThreeD)
+            {
+                return 1.0;
+            }
+
+            Parameter scaleParameter = activeView.get_Parameter(BuiltInParameter.VIEW_SCALE);
+            if (scaleParameter != null && scaleParameter.HasValue)
+            {
+                string scaleAsString = scaleParameter.AsValueString();
+                if (double.TryParse(scaleAsString, out double scaleValue))
+                {
+                    return scaleValue;
+                }
+            }
+            return 1.0;
+        }
+
+        private void OpenModelAtCoordinates(ScreenshotInfo screenshotInfo)
+        {
+            string message = $"X: {screenshotInfo.Coordinates.X}, Y: {screenshotInfo.Coordinates.Y}, Z: {screenshotInfo.Coordinates.Z} \nScale: {screenshotInfo.Scale}";
+            MessageBox.Show(message, "Coordinates");
+        }
+
+        //private void OpenModelAtCoordinates(ScreenshotInfo screenshotInfo)
+        //{
+        //    UIDocument uidoc = _commandData.Application.ActiveUIDocument;
+        //    Document doc = uidoc.Document;
+        //    View view = doc.ActiveView;
+
+        //    using (Transaction tx = new Transaction(doc, "Insert InkCanvas Image"))
+        //    {
+        //        tx.Start();
+
+        //        // Convert BitmapImage to Revit-compatible image
+        //        BitmapImage inkCanvasImage = screenshotInfo.InkCanvasImage;
+        //        System.Drawing.Bitmap bitmap = BitmapFromBitmapImage(inkCanvasImage);
+        //        byte[] imageBytes;
+        //        using (MemoryStream stream = new MemoryStream())
+        //        {
+        //            bitmap.Save(stream, System.Drawing.Imaging.ImageFormat.Png);
+        //            imageBytes = stream.ToArray();
+        //        }
+
+        //        // Create the Revit image element
+        //        ImageTypeOptions imageTypeOptions = new ImageTypeOptions("InkCanvas Image", ImageTypeSource.Import);
+        //        ElementId imageTypeId = ImageType.Create(doc, imageBytes, imageTypeOptions);
+
+        //        // Calculate the insertion point and scale
+        //        XYZ insertionPoint = screenshotInfo.Coordinates;
+        //        double scale = screenshotInfo.Scale;
+
+        //        // Create the ImageInstance
+        //        ImagePlacementOptions placementOptions = new ImagePlacementOptions(insertionPoint, XYZ.BasisX, XYZ.BasisY)
+        //        {
+        //            Scale = scale
+        //        };
+
+        //        ImageInstance.Create(doc, view, imageTypeId, placementOptions);
+
+        //        tx.Commit();
+        //    }
+        //}
+
+        private Bitmap BitmapFromBitmapImage(BitmapImage bitmapImage)
+        {
+            using (MemoryStream outStream = new MemoryStream())
+            {
+                BitmapEncoder enc = new BmpBitmapEncoder();
+                enc.Frames.Add(BitmapFrame.Create(bitmapImage));
+                enc.Save(outStream);
+                Bitmap bitmap = new Bitmap(outStream);
+                return new Bitmap(bitmap);
+            }
+        }
+
+        private XYZ GetCoordinatesFromRevit(System.Windows.Point point)
+        {
+            return new XYZ(point.X, point.Y, 0);
+        }
 
 
 
+
+        //------------------------
 
         public void SetupDockablePane(DockablePaneProviderData data)
         {
@@ -204,9 +296,6 @@ namespace TaskManager.TaskManagerPanel
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
-        private void TextBox_TextChanged(object sender, TextChangedEventArgs e)
-        {
-
-        }
+        
     }
 }
