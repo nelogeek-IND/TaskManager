@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 using System.Diagnostics;
 using System.Collections.Generic;
 
-namespace TaskManager.Helpers
+namespace TaskManager.Helpers.CaptureWindow
 {
     public partial class CaptureWindow : Window
     {

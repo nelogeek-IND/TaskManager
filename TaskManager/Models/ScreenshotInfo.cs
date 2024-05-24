@@ -10,7 +10,6 @@ namespace TaskManager.Models
 {
     public class ScreenshotInfo
     {
-
         public BitmapImage Image { get; set; }
         public string Description { get; set; }
         public System.Windows.Point StartPoint { get; set; }

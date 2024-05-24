@@ -54,9 +54,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App.cs" />
-    <Compile Include="Helpers\CaptureWindow.cs" />
-    <Compile Include="Helpers\CaptureWindow.xaml.cs">
+    <Compile Include="Helpers\CaptureWindow\CaptureWindow.cs" />
+    <Compile Include="Helpers\CaptureWindow\CaptureWindow.xaml.cs">
       <DependentUpon>CaptureWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Helpers\ScrollableMessageBox\ScrollableMessageBox.xaml.cs">
+      <DependentUpon>ScrollableMessageBox.xaml</DependentUpon>
     </Compile>
     <Compile Include="Models\ScreenshotInfo.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -75,7 +78,11 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Helpers\CaptureWindow.xaml">
+    <Page Include="Helpers\CaptureWindow\CaptureWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Helpers\ScrollableMessageBox\ScrollableMessageBox.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

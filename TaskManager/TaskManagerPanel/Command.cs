@@ -15,6 +15,7 @@ namespace TaskManager.TaskManagerPanel
                 DockablePaneId paneId = App.TaskManagerPanel;
                 DockablePane pane = commandData.Application.GetDockablePane(paneId);
 
+
                 if (pane.IsShown())
                 {
                     pane.Hide();
