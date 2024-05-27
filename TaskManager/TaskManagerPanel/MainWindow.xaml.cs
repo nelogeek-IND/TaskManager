@@ -11,8 +11,8 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using TaskManager.Handlers;
 using TaskManager.Helpers;
-using TaskManager.Models;
 using static TaskManager.Helpers.CaptureWindow;
 
 
@@ -21,13 +21,23 @@ namespace TaskManager.TaskManagerPanel
 
     public partial class MainWindow : Page, IDockablePaneProvider
     {
-        private List<ScreenshotInfo> screenshots = new List<ScreenshotInfo>();
+        private List<ViewModel> screenshots = new List<ViewModel>();
         private ExternalCommandData _commandData;
+        private ExternalEvent _openModelEvent;
+        private OpenModelEventHandler _openModelHandler;
 
         public MainWindow(ViewModel vm, ExternalCommandData commandData)
         {
             InitializeComponent();
             DataContext = vm;
+            _commandData = commandData;
+
+            _openModelHandler = new OpenModelEventHandler();
+            _openModelEvent = ExternalEvent.Create(_openModelHandler);
+        }
+
+        public void UpdateCommandData(ExternalCommandData commandData)
+        {
             _commandData = commandData;
         }
 
@@ -90,7 +100,7 @@ namespace TaskManager.TaskManagerPanel
 
                         string description = DiscriptionTextBox.Text;
 
-                        var screenshotInfo = new ScreenshotInfo
+                        var screenshotInfo = new ViewModel
                         {
                             Image = bitmapImage,
                             Description = description,
@@ -200,51 +210,93 @@ namespace TaskManager.TaskManagerPanel
             return 1.0;
         }
 
-        private void OpenModelAtCoordinates(ScreenshotInfo screenshotInfo)
-        {
-            string message = $"X: {screenshotInfo.Coordinates.X}, Y: {screenshotInfo.Coordinates.Y}, Z: {screenshotInfo.Coordinates.Z} \nScale: {screenshotInfo.Scale}";
-            MessageBox.Show(message, "Coordinates");
-        }
-
-        //private void OpenModelAtCoordinates(ScreenshotInfo screenshotInfo)
+        //private void OpenModelAtCoordinates(ViewModel screenshotInfo)
         //{
-        //    UIDocument uidoc = _commandData.Application.ActiveUIDocument;
-        //    Document doc = uidoc.Document;
-        //    View view = doc.ActiveView;
-
-        //    using (Transaction tx = new Transaction(doc, "Insert InkCanvas Image"))
+        //    try
         //    {
-        //        tx.Start();
+        //        UIDocument uidoc = _commandData.Application.ActiveUIDocument;
+        //        Document doc = uidoc.Document;
 
-        //        // Convert BitmapImage to Revit-compatible image
-        //        BitmapImage inkCanvasImage = screenshotInfo.InkCanvasImage;
-        //        System.Drawing.Bitmap bitmap = BitmapFromBitmapImage(inkCanvasImage);
-        //        byte[] imageBytes;
-        //        using (MemoryStream stream = new MemoryStream())
+        //        string message = $"X: {screenshotInfo.Coordinates.X}, Y: {screenshotInfo.Coordinates.Y}, Z: {screenshotInfo.Coordinates.Z} \nScale: {screenshotInfo.Scale}";
+        //        MessageBox.Show(message, "Coordinates");
+        //    }
+        //    catch (Exception ex) { }
+        //}
+
+        //private void OpenModelAtCoordinates(ViewModel screenshotInfo)
+        //{
+        //    if (_commandData == null)
+        //    {
+        //        MessageBox.Show("Ошибка в CommandData. Вероятнее всего он равен null");
+        //        return;
+        //    }
+
+        //    try
+        //    {
+        //        UIDocument uidoc = _commandData.Application.ActiveUIDocument;
+        //        Document doc = uidoc.Document;
+
+        //        using (Transaction tx = new Transaction(doc, "Insert InkCanvas Image"))
         //        {
-        //            bitmap.Save(stream, System.Drawing.Imaging.ImageFormat.Png);
-        //            imageBytes = stream.ToArray();
+        //            tx.Start();
+
+        //            // Конвертируем BitmapImage в изображение, совместимое с Revit
+        //            BitmapImage inkCanvasImage = screenshotInfo.InkCanvasImage;
+        //            System.Drawing.Bitmap bitmap = BitmapFromBitmapImage(inkCanvasImage);
+
+        //            // Сохраняем изображение во временный файл
+        //            string tempDir = @"C:\Temp";
+        //            if (!Directory.Exists(tempDir))
+        //            {
+        //                Directory.CreateDirectory(tempDir);
+        //            }
+        //            string tempImagePath = Path.Combine(tempDir, "RevScreenshot.png");
+        //            bitmap.Save(tempImagePath, System.Drawing.Imaging.ImageFormat.Png);
+
+        //            // Создаем ModelPath из временного пути
+        //            ModelPath modelPath = ModelPathUtils.ConvertUserVisiblePathToModelPath(tempImagePath);
+
+        //            // Создаем внешнюю ссылку на временный файл
+        //            ExternalResourceReference externalResource = ExternalResourceReference.CreateLocalResource(doc, null, modelPath, PathType.Absolute);
+
+        //            // Создаем параметры типа изображения для Revit
+        //            ImageTypeOptions options = new ImageTypeOptions(externalResource, ImageTypeSource.Link);
+
+        //            // Создаем тип изображения в Revit
+        //            ImageType imageType = ImageType.Create(doc, options);
+
+        //            // Рассчитываем точку вставки
+        //            XYZ insertionPoint = screenshotInfo.Coordinates;
+
+        //            // Получаем текущий вид
+        //            View view = uidoc.ActiveView;
+
+        //            // Создаем экземпляр изображения
+        //            ImageInstance imageInstance = ImageInstance.Create(doc, view, imageType.Id, null);
+
+        //            tx.Commit();
+
+        //            // Удаляем временный файл
+        //            File.Delete(tempImagePath);
         //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
 
-        //        // Create the Revit image element
-        //        ImageTypeOptions imageTypeOptions = new ImageTypeOptions("InkCanvas Image", ImageTypeSource.Import);
-        //        ElementId imageTypeId = ImageType.Create(doc, imageBytes, imageTypeOptions);
-
-        //        // Calculate the insertion point and scale
-        //        XYZ insertionPoint = screenshotInfo.Coordinates;
-        //        double scale = screenshotInfo.Scale;
-
-        //        // Create the ImageInstance
-        //        ImagePlacementOptions placementOptions = new ImagePlacementOptions(insertionPoint, XYZ.BasisX, XYZ.BasisY)
-        //        {
-        //            Scale = scale
-        //        };
-
-        //        ImageInstance.Create(doc, view, imageTypeId, placementOptions);
-
-        //        tx.Commit();
         //    }
         //}
+
+        private void OpenModelAtCoordinates(ViewModel screenshotInfo)
+        {
+            if (_commandData == null)
+            {
+                MessageBox.Show("Ошибка в CommandData. Вероятнее всего он равен null");
+                return;
+            }
+
+            _openModelHandler.SetParameters(screenshotInfo, _commandData);
+            _openModelEvent.Raise();
+        }
 
         private Bitmap BitmapFromBitmapImage(BitmapImage bitmapImage)
         {
@@ -296,6 +348,6 @@ namespace TaskManager.TaskManagerPanel
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
-        
+
     }
 }

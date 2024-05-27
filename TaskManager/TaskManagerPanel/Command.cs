@@ -15,15 +15,15 @@ namespace TaskManager.TaskManagerPanel
                 DockablePaneId paneId = App.TaskManagerPanel;
                 DockablePane pane = commandData.Application.GetDockablePane(paneId);
 
+                // Обновление commandData в MainWindow
+                App.UpdateMainWindowCommandData(commandData);
+
                 if (pane.IsShown())
                 {
                     pane.Hide();
                 }
                 else
                 {
-                    // Создаем ViewModel и MainWindow, передаем commandData
-                    var viewModel = new ViewModel();
-                    var mainWindow = new MainWindow(viewModel, commandData);
                     pane.Show();
                 }
 
