@@ -18,7 +18,7 @@
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <Image Grid.Column="0" Source="{Binding ImageSource}" Width="100" Height="100" Stretch="Uniform"/>
+                    <Image Grid.Column="0" Source="{Binding ImageSource}" Stretch="Uniform"/>
                     <TextBox Grid.Column="1" Text="{Binding Description}" VerticalAlignment="Center" Margin="10,0"/>
                 </Grid>
             </DataTemplate>
