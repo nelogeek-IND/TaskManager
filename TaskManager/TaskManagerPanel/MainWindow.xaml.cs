@@ -1,19 +1,26 @@
 ﻿using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
+using Autodesk.Revit.UI.Selection;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
+using System.Windows.Forms;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using TaskManager.Handlers;
 using TaskManager.Helpers;
 using static TaskManager.Helpers.CaptureWindow;
+using static TaskManager.TaskManagerPanel.MainWindow;
+using MessageBox = System.Windows.MessageBox;
+using Transform = Autodesk.Revit.DB.Transform;
 
 
 namespace TaskManager.TaskManagerPanel
@@ -23,8 +30,12 @@ namespace TaskManager.TaskManagerPanel
     {
         private List<ViewModel> screenshots = new List<ViewModel>();
         private ExternalCommandData _commandData;
+
         private ExternalEvent _openModelEvent;
         private OpenModelEventHandler _openModelHandler;
+
+        private ExternalEvent openViewEvent;
+        private OpenViewEventHandler openViewHandler;
 
         public MainWindow(ViewModel vm, ExternalCommandData commandData)
         {
@@ -34,6 +45,9 @@ namespace TaskManager.TaskManagerPanel
 
             _openModelHandler = new OpenModelEventHandler();
             _openModelEvent = ExternalEvent.Create(_openModelHandler);
+
+            openViewHandler = new OpenViewEventHandler();
+            openViewEvent = ExternalEvent.Create(openViewHandler);
         }
 
         public void UpdateCommandData(ExternalCommandData commandData)
@@ -100,15 +114,42 @@ namespace TaskManager.TaskManagerPanel
 
                         string description = DiscriptionTextBox.Text;
 
+                        // Запоминаем координаты окна Revit относительно экрана
+                        var revitWindowCoordinates = new System.Windows.Point(revitWindowRect.Left, revitWindowRect.Top);
+
+                        // Переводим точки начала и конца в координаты Revit
+                        XYZ revitStartPoint = ConvertScreenPointToModelPoint(startPoint);
+                        XYZ revitEndPoint = ConvertScreenPointToModelPoint(endPoint);
+
+                        UIDocument uidoc = _commandData.Application.ActiveUIDocument;
+
+                        Autodesk.Revit.DB.ViewPlan view = uidoc.ActiveGraphicalView as ViewPlan;
+                        if (view == null)
+                        {
+                            MessageBox.Show("Активный вид не является планом этажа.");
+                            return;
+                        }
+
+                        ElementId viewId = view.Id;  // Получаем идентификатор активного вида
+
+                        XYZ viewCenter = view.Origin;  // Центр вида
+
+                        double zoomLevel = GetZoomLevel(view);
+
                         var screenshotInfo = new ViewModel
                         {
                             Image = bitmapImage,
                             Description = description,
                             StartPoint = startPoint,
                             EndPoint = endPoint,
-                            Coordinates = GetCoordinatesFromRevit(startPoint),
+                            RevitWindowCoordinates = revitWindowCoordinates, //GetCoordinatesFromRevit(startPoint),
+                            RevitStartPointCoordinates = revitStartPoint,
+                            RevitEndPointCoordinates = revitEndPoint,
                             Scale = GetCurrentScale(),
-                            InkCanvasImage = inkCanvasImage
+                            InkCanvasImage = inkCanvasImage,
+                            ViewId = viewId,
+                            CenterPoint = viewCenter,
+                            Zoom = zoomLevel,
                         };
                         screenshots.Add(screenshotInfo);
 
@@ -123,7 +164,7 @@ namespace TaskManager.TaskManagerPanel
                         //image2.Margin = new Thickness(5);
                         //paragraph.Inlines.Add(image2);
 
-                        image.MouseLeftButtonDown += (s, args) => ShowCanvasWithImage(screenshotInfo);
+                        image.MouseLeftButtonDown += (s, args) => OpenModelAtCoordinates(screenshotInfo); // ShowCanvasWithImage(screenshotInfo);
                         //image2.MouseLeftButtonDown += (s, args) => OpenModelAtCoordinates(screenshotInfo);
 
                         paragraph.Inlines.Add(new Run(description));
@@ -153,6 +194,93 @@ namespace TaskManager.TaskManagerPanel
                 MessageBox.Show($"Произошла ошибка: {ex.Message}");
             }
         }
+
+        private double GetZoomLevel(ViewPlan view)
+        {
+            // Проверка, что переданный вид - это план этажа
+            if (view == null)
+                throw new ArgumentNullException(nameof(view));
+
+            UIDocument uidoc = _commandData.Application.ActiveUIDocument;
+            Document doc = uidoc.Document;
+
+            // Получаем размеры окна Revit
+            Autodesk.Revit.DB.Rectangle revitRect = uidoc.GetOpenUIViews().FirstOrDefault(uiv => uiv.ViewId == view.Id)?.GetWindowRectangle();
+            if (revitRect == null)
+                throw new InvalidOperationException("Не удалось получить размеры окна Revit для текущего вида.");
+
+            // Преобразуем Autodesk.Revit.DB.Rectangle в System.Drawing.Rectangle
+            System.Drawing.Rectangle viewRect = new System.Drawing.Rectangle(revitRect.Left, revitRect.Top, revitRect.Right - revitRect.Left, revitRect.Bottom - revitRect.Top);
+
+            double windowWidth = viewRect.Width;
+            double windowHeight = viewRect.Height;
+
+            // Получаем границы вида
+            BoundingBoxXYZ boundingBox = view.get_BoundingBox(null);
+            double viewWidth = boundingBox.Max.X - boundingBox.Min.X;
+            double viewHeight = boundingBox.Max.Y - boundingBox.Min.Y;
+
+            // Получаем масштаб аннотаций и текущий масштаб вида
+            double annotationScale = view.get_Parameter(BuiltInParameter.VIEW_SCALE_PULLDOWN_METRIC).AsDouble();
+            double viewScale = view.Scale;
+
+            // Рассчитываем текущий уровень зума как отношение размеров окна к размерам вида
+            double zoomLevelWidth = windowWidth / (viewWidth * viewScale / annotationScale);
+            double zoomLevelHeight = windowHeight / (viewHeight * viewScale / annotationScale);
+
+            // Возвращаем минимальное значение, чтобы соответствовать обоим осям
+            return Math.Min(zoomLevelWidth, zoomLevelHeight);
+        }
+
+        //private XYZ ConvertScreenPointToModelPoint(System.Windows.Point screenPoint)
+        //{
+        //    // Здесь вы можете использовать преобразования из API Revit для конвертации экранных координат в модельные.
+        //    // Это может включать в себя работу с Viewport и преобразования координат.
+        //    // Примерный код может быть следующим, но его нужно адаптировать под ваши нужды:
+
+        //    UIDocument uidoc = _commandData.Application.ActiveUIDocument;
+        //    Autodesk.Revit.DB.View view = uidoc.ActiveView;
+
+        //    UV uv = new UV(screenPoint.X, screenPoint.Y);
+        //    XYZ modelPoint = uidoc.Application.ActiveUIDocument.Document.ActiveView.ViewToProjectPoint(uv);
+        //    return modelPoint;
+        //}
+
+
+
+
+
+
+        //private XYZ ConvertScreenPointToModelPoint(System.Windows.Point screenPoint)
+        //{
+        //    UIDocument uidoc = _commandData.Application.ActiveUIDocument;
+        //    Document doc = uidoc.Document;
+        //    Autodesk.Revit.DB.View view = uidoc.ActiveGraphicalView;
+
+        //    // Получаем масштаб вида и трансформацию вида
+        //    double scale = view.Scale;
+        //    Transform transform = view.CropBox.Transform;
+
+        //    // Переводим экранные координаты в футы
+        //    double pixelsPerInch = 96.0; // 96 пикселей на дюйм
+        //    double feetPerInch = 1.0 / 12.0; // 1 фут = 12 дюймов
+
+        //    // Переводим экранные координаты в футы с учетом масштаба вида
+        //    double xInFeet = (screenPoint.X / pixelsPerInch) * feetPerInch * scale;
+        //    double yInFeet = (screenPoint.Y / pixelsPerInch) * feetPerInch * scale;
+
+        //    // Создаем точку в экранных координатах
+        //    XYZ screenXYZ = new XYZ(xInFeet, yInFeet, 0);
+
+        //    // Переводим экранные координаты в координаты модели
+        //    XYZ modelXYZ = transform.OfPoint(screenXYZ);
+
+        //    return modelXYZ;
+        //}
+
+
+
+
 
         private Bitmap BitmapFromBitmapSource(BitmapSource bitmapSource)
         {
@@ -219,11 +347,11 @@ namespace TaskManager.TaskManagerPanel
                 return;
             }
 
-            _openModelHandler.SetParameters(screenshotInfo, _commandData);
-            _openModelEvent.Raise();
+            openViewHandler.ScreenshotInfo = screenshotInfo;
+            openViewEvent.Raise();
         }
 
-        
+
 
         private XYZ GetCoordinatesFromRevit(System.Windows.Point point)
         {
@@ -242,7 +370,7 @@ namespace TaskManager.TaskManagerPanel
                 Background = System.Windows.Media.Brushes.Transparent,
                 Topmost = true,
                 ShowInTaskbar = false,
-                Opacity = 0.8 // Можно настроить прозрачность окна
+                Opacity = 0.8
             };
 
             Canvas canvas = new Canvas
@@ -273,10 +401,101 @@ namespace TaskManager.TaskManagerPanel
             overlayWindow.Left = revitWindowRect.Left + screenshotInfo.StartPoint.X;
             overlayWindow.Top = revitWindowRect.Top + screenshotInfo.StartPoint.Y;
 
-            // Добавляем обработчик событий для закрытия окна по клику
-            overlayWindow.MouseLeftButtonDown += (s, e) => overlayWindow.Close();
+            overlayWindow.MouseLeftButtonDown += (s, e) => overlayWindow.DragMove();
+            overlayWindow.MouseRightButtonDown += (s, e) => overlayWindow.Close();
 
             overlayWindow.Show();
+        }
+
+
+        private void ShowModelCoordinates(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                UIDocument uidoc = _commandData.Application.ActiveUIDocument;
+                Document doc = uidoc.Document;
+
+                // Выбираем точку на экране
+                XYZ pickedPoint = uidoc.Selection.PickPoint("Выберите точку для получения координат");
+
+                // Получаем элемент, ближайший к этой точке
+                Reference pickedReference = uidoc.Selection.PickObject(ObjectType.Element, "Выберите объект для получения координат");
+                Element element = doc.GetElement(pickedReference);
+
+                // Получаем местоположение элемента
+                Location location = element.Location;
+                XYZ locationPoint = null;
+
+                if (location is LocationPoint locationPointElement)
+                {
+                    locationPoint = locationPointElement.Point;
+                }
+                else if (location is LocationCurve locationCurveElement)
+                {
+                    // Получаем среднюю точку кривой как местоположение объекта
+                    locationPoint = locationCurveElement.Curve.Evaluate(0.5, true);
+                }
+
+                if (locationPoint != null)
+                {
+                    MessageBox.Show($"Координаты объекта: X = {locationPoint.X}, Y = {locationPoint.Y}, Z = {locationPoint.Z}");
+                }
+                else
+                {
+                    MessageBox.Show("Не удалось определить координаты объекта.");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Произошла ошибка: {ex.Message}");
+            }
+        }
+
+        private XYZ ConvertScreenPointToModelPoint(System.Windows.Point screenPoint)
+        {
+            UIDocument uidoc = _commandData.Application.ActiveUIDocument;
+            Document doc = uidoc.Document;
+            Autodesk.Revit.DB.View view = uidoc.ActiveGraphicalView;
+
+            // Симулируем клик по экрану
+            SimulateClick(screenPoint);
+
+            // Получаем координаты модели
+            XYZ pointInModel = null;
+
+            try
+            {
+                // Выбираем точку на экране
+                XYZ pointOnScreen = uidoc.Selection.PickPoint(ObjectSnapTypes.Intersections);
+
+                // Преобразуем пиксельные координаты в координаты модели
+                pointInModel = view.CropBox.Transform.OfPoint(pointOnScreen);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Произошла ошибка при выборе точки: {ex.Message}");
+            }
+
+            return pointInModel;
+        }
+
+        [DllImport("user32.dll")]
+        static extern bool SetCursorPos(int X, int Y);
+
+        [DllImport("user32.dll")]
+        static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, int dwExtraInfo);
+
+        const uint MOUSEEVENTF_LEFTDOWN = 0x02;
+        const uint MOUSEEVENTF_LEFTUP = 0x04;
+
+        private void SimulateClick(System.Windows.Point screenPoint)
+        {
+            // Установить курсор в позицию
+            SetCursorPos((int)screenPoint.X, (int)screenPoint.Y);
+
+            // Симулировать нажатие и отпускание левой кнопки мыши
+            mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
+            mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
         }
 
 
@@ -310,6 +529,6 @@ namespace TaskManager.TaskManagerPanel
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
-
+        
     }
 }

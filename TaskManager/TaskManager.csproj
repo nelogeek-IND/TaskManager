@@ -57,6 +57,7 @@
     <Compile Include="Commands\GetElementCoordinatesCommand.cs" />
     <Compile Include="Commands\InsertCanvasWithImageCommand.cs" />
     <Compile Include="Handlers\OpenModelEventHandler.cs" />
+    <Compile Include="Handlers\OpenViewEventHandler.cs" />
     <Compile Include="Helpers\CaptureWindow.xaml.cs">
       <DependentUpon>CaptureWindow.xaml</DependentUpon>
     </Compile>
