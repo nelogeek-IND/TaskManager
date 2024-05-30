@@ -115,7 +115,8 @@ namespace TaskManager.TaskManagerPanel
                         string description = DiscriptionTextBox.Text;
 
                         // Запоминаем координаты окна Revit относительно экрана
-                        var revitWindowCoordinates = new System.Windows.Point(revitWindowRect.Left, revitWindowRect.Top);
+                        var revitStartPointCoordinates = new System.Windows.Point(revitWindowRect.Left, revitWindowRect.Top);
+                        var revitEndPointCoordinates = new System.Windows.Point(revitWindowRect.Right, revitWindowRect.Bottom);
 
                         // Переводим точки начала и конца в координаты Revit
                         XYZ revitStartPoint = ConvertScreenPointToModelPoint(startPoint);
@@ -130,6 +131,17 @@ namespace TaskManager.TaskManagerPanel
                             return;
                         }
 
+                        UIView uiView = uidoc.GetOpenUIViews().FirstOrDefault(v => v.ViewId == view.Id);
+                        if (uiView == null)
+                        {
+                            MessageBox.Show("Не удалось получить UIView для текущего вида.");
+                            return;
+                        }
+
+                        var corners = uiView.GetZoomCorners();
+                        XYZ lowerLeft = corners[0];
+                        XYZ upperRight = corners[1];
+
                         ElementId viewId = view.Id;  // Получаем идентификатор активного вида
 
                         XYZ viewCenter = view.Origin;  // Центр вида
@@ -142,9 +154,9 @@ namespace TaskManager.TaskManagerPanel
                             Description = description,
                             StartPoint = startPoint,
                             EndPoint = endPoint,
-                            RevitWindowCoordinates = revitWindowCoordinates, //GetCoordinatesFromRevit(startPoint),
-                            RevitStartPointCoordinates = revitStartPoint,
-                            RevitEndPointCoordinates = revitEndPoint,
+                            RevitWindowCoordinates = revitStartPointCoordinates, //GetCoordinatesFromRevit(startPoint),
+                            RevitStartPointCoordinates = lowerLeft,
+                            RevitEndPointCoordinates = upperRight,
                             Scale = GetCurrentScale(),
                             InkCanvasImage = inkCanvasImage,
                             ViewId = viewId,
@@ -529,6 +541,6 @@ namespace TaskManager.TaskManagerPanel
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
-        
+
     }
 }
