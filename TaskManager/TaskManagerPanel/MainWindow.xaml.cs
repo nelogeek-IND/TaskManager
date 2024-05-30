@@ -31,9 +31,6 @@ namespace TaskManager.TaskManagerPanel
         private List<ViewModel> screenshots = new List<ViewModel>();
         private ExternalCommandData _commandData;
 
-        private ExternalEvent _openModelEvent;
-        private OpenModelEventHandler _openModelHandler;
-
         private ExternalEvent openViewEvent;
         private OpenViewEventHandler openViewHandler;
 
@@ -42,9 +39,6 @@ namespace TaskManager.TaskManagerPanel
             InitializeComponent();
             DataContext = vm;
             _commandData = commandData;
-
-            _openModelHandler = new OpenModelEventHandler();
-            _openModelEvent = ExternalEvent.Create(_openModelHandler);
 
             openViewHandler = new OpenViewEventHandler();
             openViewEvent = ExternalEvent.Create(openViewHandler);
@@ -244,53 +238,7 @@ namespace TaskManager.TaskManagerPanel
             return Math.Min(zoomLevelWidth, zoomLevelHeight);
         }
 
-        //private XYZ ConvertScreenPointToModelPoint(System.Windows.Point screenPoint)
-        //{
-        //    // Здесь вы можете использовать преобразования из API Revit для конвертации экранных координат в модельные.
-        //    // Это может включать в себя работу с Viewport и преобразования координат.
-        //    // Примерный код может быть следующим, но его нужно адаптировать под ваши нужды:
-
-        //    UIDocument uidoc = _commandData.Application.ActiveUIDocument;
-        //    Autodesk.Revit.DB.View view = uidoc.ActiveView;
-
-        //    UV uv = new UV(screenPoint.X, screenPoint.Y);
-        //    XYZ modelPoint = uidoc.Application.ActiveUIDocument.Document.ActiveView.ViewToProjectPoint(uv);
-        //    return modelPoint;
-        //}
-
-
-
-
-
-
-        //private XYZ ConvertScreenPointToModelPoint(System.Windows.Point screenPoint)
-        //{
-        //    UIDocument uidoc = _commandData.Application.ActiveUIDocument;
-        //    Document doc = uidoc.Document;
-        //    Autodesk.Revit.DB.View view = uidoc.ActiveGraphicalView;
-
-        //    // Получаем масштаб вида и трансформацию вида
-        //    double scale = view.Scale;
-        //    Transform transform = view.CropBox.Transform;
-
-        //    // Переводим экранные координаты в футы
-        //    double pixelsPerInch = 96.0; // 96 пикселей на дюйм
-        //    double feetPerInch = 1.0 / 12.0; // 1 фут = 12 дюймов
-
-        //    // Переводим экранные координаты в футы с учетом масштаба вида
-        //    double xInFeet = (screenPoint.X / pixelsPerInch) * feetPerInch * scale;
-        //    double yInFeet = (screenPoint.Y / pixelsPerInch) * feetPerInch * scale;
-
-        //    // Создаем точку в экранных координатах
-        //    XYZ screenXYZ = new XYZ(xInFeet, yInFeet, 0);
-
-        //    // Переводим экранные координаты в координаты модели
-        //    XYZ modelXYZ = transform.OfPoint(screenXYZ);
-
-        //    return modelXYZ;
-        //}
-
-
+        
 
 
 
@@ -364,11 +312,6 @@ namespace TaskManager.TaskManagerPanel
         }
 
 
-
-        private XYZ GetCoordinatesFromRevit(System.Windows.Point point)
-        {
-            return new XYZ(point.X, point.Y, 0);
-        }
 
         private void ShowCanvasWithImage(ViewModel screenshotInfo)
         {

@@ -1,6 +1,5 @@
 ﻿using Autodesk.Revit.UI;
 using System;
-using TaskManager.Commands;
 using TaskManager.TaskManagerPanel;
 
 namespace TaskManager
@@ -20,15 +19,6 @@ namespace TaskManager
             RibbonPanel panel = a.CreateRibbonPanel("Task Manager");
             PushButtonData buttonData = new PushButtonData("OpenTaskManager", "Open Task Manager", typeof(App).Assembly.Location, "TaskManager.TaskManagerPanel.Command");
             panel.AddItem(buttonData);
-
-            //RibbonPanel panel = application.CreateRibbonPanel("Coordinates Tools");
-            PushButtonData buttonGetCoordinates = new PushButtonData(
-                "GetCoordinates",
-                "Get Coordinates",
-                typeof(GetElementCoordinatesCommand).Assembly.Location,
-                "TaskManager.Commands.GetElementCoordinatesCommand");
-
-            panel.AddItem(buttonGetCoordinates);
 
             return Result.Succeeded;
         }

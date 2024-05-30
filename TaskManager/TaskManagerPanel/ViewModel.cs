@@ -26,6 +26,5 @@ namespace TaskManager.TaskManagerPanel
         public XYZ CenterPoint { get; set; }
         public double Scale { get; set; }
         public double Zoom { get; set; }
-        public XYZ ViewCenter { get; set; }
     }
 }
