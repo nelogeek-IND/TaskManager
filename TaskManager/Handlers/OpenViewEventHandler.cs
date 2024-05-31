@@ -15,7 +15,7 @@ namespace TaskManager.Handlers
 {
     public class OpenViewEventHandler : IExternalEventHandler
     {
-        public ViewModel ScreenshotInfo { get; set; }
+        public Task taskInfo { get; set; }
 
         public void Execute(UIApplication app)
         {
@@ -25,7 +25,7 @@ namespace TaskManager.Handlers
             try
             {
                 // Переключаемся на сохраненный вид
-                Autodesk.Revit.DB.View view = doc.GetElement(ScreenshotInfo.ViewId) as Autodesk.Revit.DB.View;
+                Autodesk.Revit.DB.View view = doc.GetElement(taskInfo.ViewId) as Autodesk.Revit.DB.View;
                 if (view != null)
                 {
                     uidoc.ActiveView = view;
@@ -34,28 +34,19 @@ namespace TaskManager.Handlers
                     using (Transaction transaction = new Transaction(doc, "Установка масштаба"))
                     {
                         transaction.Start();
-                        view.Scale = (int)ScreenshotInfo.Scale;
+                        view.Scale = (int)taskInfo.Scale;
                         transaction.Commit();
                     }
 
                     // Фокусируемся на сохраненной области
-                    XYZ minPoint = new XYZ(
-                        ScreenshotInfo.RevitStartPointCoordinates.X,
-                        ScreenshotInfo.RevitStartPointCoordinates.Y,
-                        ScreenshotInfo.RevitStartPointCoordinates.Z
-                    );
-
-                    XYZ maxPoint = new XYZ(
-                        ScreenshotInfo.RevitEndPointCoordinates.X,
-                        ScreenshotInfo.RevitEndPointCoordinates.Y,
-                        ScreenshotInfo.RevitEndPointCoordinates.Z
-                    );
+                    XYZ minPoint = taskInfo.RevitStartPointCoordinates;
+                    XYZ maxPoint = taskInfo.RevitEndPointCoordinates;
 
                     // Используем метод ZoomAndCenterRectangle для масштабирования и центровки области
                     uidoc.GetOpenUIViews().FirstOrDefault(uiView => uiView.ViewId == view.Id)?.ZoomAndCenterRectangle(minPoint, maxPoint);
 
-                    // Показать скриншот как оверлей
-                    ShowCanvasWithImage(ScreenshotInfo);
+                    //// Показать скриншот как оверлей
+                    //ShowCanvasWithImage(taskInfo);
                 }
                 else
                 {
@@ -73,53 +64,53 @@ namespace TaskManager.Handlers
             return "Open View Event Handler";
         }
 
-        private void ShowCanvasWithImage(ViewModel screenshotInfo)
-        {
-            Window overlayWindow = new Window
-            {
-                Title = "Canvas Overlay",
-                Width = screenshotInfo.InkCanvasImage.PixelWidth,
-                Height = screenshotInfo.InkCanvasImage.PixelHeight,
-                WindowStyle = WindowStyle.None,
-                AllowsTransparency = true,
-                Background = System.Windows.Media.Brushes.Transparent,
-                Topmost = true,
-                ShowInTaskbar = false,
-                Opacity = 0.8
-            };
+        //private void ShowCanvasWithImage(ViewModel screenshotInfo)
+        //{
+        //    Window overlayWindow = new Window
+        //    {
+        //        Title = "Canvas Overlay",
+        //        Width = screenshotInfo.InkCanvasImage.PixelWidth,
+        //        Height = screenshotInfo.InkCanvasImage.PixelHeight,
+        //        WindowStyle = WindowStyle.None,
+        //        AllowsTransparency = true,
+        //        Background = System.Windows.Media.Brushes.Transparent,
+        //        Topmost = true,
+        //        ShowInTaskbar = false,
+        //        Opacity = 0.8
+        //    };
 
-            Canvas canvas = new Canvas
-            {
-                Width = screenshotInfo.InkCanvasImage.PixelWidth,
-                Height = screenshotInfo.InkCanvasImage.PixelHeight,
-                Background = System.Windows.Media.Brushes.Transparent
-            };
+        //    Canvas canvas = new Canvas
+        //    {
+        //        Width = screenshotInfo.InkCanvasImage.PixelWidth,
+        //        Height = screenshotInfo.InkCanvasImage.PixelHeight,
+        //        Background = System.Windows.Media.Brushes.Transparent
+        //    };
 
-            System.Windows.Controls.Image image = new System.Windows.Controls.Image
-            {
-                Source = screenshotInfo.InkCanvasImage,
-                Width = screenshotInfo.InkCanvasImage.PixelWidth,
-                Height = screenshotInfo.InkCanvasImage.PixelHeight
-            };
+        //    System.Windows.Controls.Image image = new System.Windows.Controls.Image
+        //    {
+        //        Source = screenshotInfo.InkCanvasImage,
+        //        Width = screenshotInfo.InkCanvasImage.PixelWidth,
+        //        Height = screenshotInfo.InkCanvasImage.PixelHeight
+        //    };
 
-            Canvas.SetLeft(image, 0);
-            Canvas.SetTop(image, 0);
-            canvas.Children.Add(image);
+        //    Canvas.SetLeft(image, 0);
+        //    Canvas.SetTop(image, 0);
+        //    canvas.Children.Add(image);
 
-            overlayWindow.Content = canvas;
+        //    overlayWindow.Content = canvas;
 
-            // Получаем координаты окна Revit
-            IntPtr revitHandle = Process.GetCurrentProcess().MainWindowHandle;
-            GetWindowRect(revitHandle, out RECT revitWindowRect);
+        //    // Получаем координаты окна Revit
+        //    IntPtr revitHandle = Process.GetCurrentProcess().MainWindowHandle;
+        //    GetWindowRect(revitHandle, out RECT revitWindowRect);
 
-            // Устанавливаем позицию нового окна относительно координат, где был сделан скриншот
-            overlayWindow.Left = revitWindowRect.Left + screenshotInfo.StartPoint.X;
-            overlayWindow.Top = revitWindowRect.Top + screenshotInfo.StartPoint.Y;
+        //    // Устанавливаем позицию нового окна относительно координат, где был сделан скриншот
+        //    overlayWindow.Left = revitWindowRect.Left + screenshotInfo.StartPoint.X;
+        //    overlayWindow.Top = revitWindowRect.Top + screenshotInfo.StartPoint.Y;
 
-            overlayWindow.MouseLeftButtonDown += (s, e) => overlayWindow.Close();
+        //    overlayWindow.MouseLeftButtonDown += (s, e) => overlayWindow.Close();
 
-            overlayWindow.Show();
-        }
+        //    overlayWindow.Show();
+        //}
 
 
 

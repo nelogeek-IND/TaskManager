@@ -1,6 +1,7 @@
 ﻿using Autodesk.Revit.DB;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
@@ -12,16 +13,31 @@ namespace TaskManager.TaskManagerPanel
 {
     public class ViewModel : INotifyPropertyChanged
     {
-        public event PropertyChangedEventHandler PropertyChanged = delegate { };
-    
-        public BitmapImage Image { get; set; }
+        private ObservableCollection<Task> tasks = new ObservableCollection<Task>();
+        public ObservableCollection<Task> Tasks
+        {
+            get { return tasks; }
+            set { tasks = value; OnPropertyChanged("Tasks"); }
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
+    public class Task
+    {
+        public string TaskName { get; set; }
+        public string CreatorName { get; set; }
+        public string CreationDate { get; set; }
         public string Description { get; set; }
-        public System.Windows.Point StartPoint { get; set; }
-        public System.Windows.Point EndPoint { get; set; }
+        public BitmapImage Screenshot { get; set; }
+
+        // Добавляем свойства для сохранения информации о виде
         public XYZ RevitStartPointCoordinates { get; set; }
         public XYZ RevitEndPointCoordinates { get; set; }
-        public BitmapImage InkCanvasImage { get; set; }
-        public System.Windows.Point RevitWindowCoordinates { get; set; }
         public ElementId ViewId { get; set; }
         public XYZ CenterPoint { get; set; }
         public double Scale { get; set; }

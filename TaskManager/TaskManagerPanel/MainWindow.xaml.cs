@@ -8,6 +8,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -17,6 +18,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using TaskManager.Handlers;
 using TaskManager.Helpers;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TrackBar;
 using static TaskManager.Helpers.CaptureWindow;
 using static TaskManager.TaskManagerPanel.MainWindow;
 using MessageBox = System.Windows.MessageBox;
@@ -28,7 +30,7 @@ namespace TaskManager.TaskManagerPanel
 
     public partial class MainWindow : Page, IDockablePaneProvider
     {
-        private List<ViewModel> screenshots = new List<ViewModel>();
+        private List<Task> tasks = new List<Task>();
         private ExternalCommandData _commandData;
 
         private ExternalEvent openViewEvent;
@@ -42,6 +44,9 @@ namespace TaskManager.TaskManagerPanel
 
             openViewHandler = new OpenViewEventHandler();
             openViewEvent = ExternalEvent.Create(openViewHandler);
+
+            UserNameTextBlock.Text = "Имя пользователя";
+            UserAvatar = null;
         }
 
         public void UpdateCommandData(ExternalCommandData commandData)
@@ -49,7 +54,8 @@ namespace TaskManager.TaskManagerPanel
             _commandData = commandData;
         }
 
-        private void PrintScreen(object sender, RoutedEventArgs e)
+
+        private void AddTask(object sender, RoutedEventArgs e)
         {
             try
             {
@@ -106,7 +112,7 @@ namespace TaskManager.TaskManagerPanel
                         }
                         BitmapImage bitmapImage = ConvertBitmapToBitmapImage(combinedBitmap);
 
-                        string description = DiscriptionTextBox.Text;
+                        string description = DescriptionTextBox.Text;
 
                         // Запоминаем координаты окна Revit относительно экрана
                         var revitStartPointCoordinates = new System.Windows.Point(revitWindowRect.Left, revitWindowRect.Top);
@@ -138,47 +144,35 @@ namespace TaskManager.TaskManagerPanel
 
                         double zoomLevel = GetZoomLevel(view);
 
-                        var screenshotInfo = new ViewModel
+                        // Создаем новый объект Task и добавляем его в коллекцию задач
+                        var newTask = new Task
                         {
-                            Image = bitmapImage,
+                            TaskName = $"Task #{tasks.Count + 1}",
+                            CreatorName = "Текущий пользователь", // Заменить на имя текущего пользователя
+                            CreationDate = DateTime.Now.ToString("dd.MM.yyyy"),
                             Description = description,
-                            StartPoint = startPoint,
-                            EndPoint = endPoint,
+                            Screenshot = bitmapImage,
                             RevitStartPointCoordinates = lowerLeft,
                             RevitEndPointCoordinates = upperRight,
-                            Scale = GetCurrentScale(),
-                            InkCanvasImage = inkCanvasImage,
                             ViewId = viewId,
                             CenterPoint = viewCenter,
-                            Zoom = zoomLevel,
+                            Scale = GetCurrentScale(),
+                            Zoom = zoomLevel
                         };
-                        screenshots.Add(screenshotInfo);
 
-                        Paragraph paragraph = new Paragraph();
-                        System.Windows.Controls.Image image = new System.Windows.Controls.Image();
-                        image.Source = bitmapImage;
-                        image.Margin = new Thickness(5);
-                        paragraph.Inlines.Add(image);
+                        tasks.Add(newTask);  // Добавляем задачу в локальный список
 
-                        //System.Windows.Controls.Image image2 = new System.Windows.Controls.Image();
-                        //image2.Source = inkCanvasImage;
-                        //image2.Margin = new Thickness(5);
-                        //paragraph.Inlines.Add(image2);
-
-                        image.MouseLeftButtonDown += (s, args) => OpenModelAtCoordinates(screenshotInfo); // ShowCanvasWithImage(screenshotInfo);
-                        //image2.MouseLeftButtonDown += (s, args) => OpenModelAtCoordinates(screenshotInfo);
-
-                        paragraph.Inlines.Add(new Run(description));
-
-                        FlowDocument flowDocument = FlowDocReader.Document as FlowDocument;
-                        if (flowDocument == null)
+                        ViewModel viewModel = DataContext as ViewModel;
+                        if (viewModel != null)
                         {
-                            flowDocument = new FlowDocument();
-                            FlowDocReader.Document = flowDocument;
+                            viewModel.Tasks.Add(newTask);
                         }
-                        flowDocument.Blocks.Add(paragraph);
+                        else
+                        {
+                            MessageBox.Show("Не удалось получить ViewModel.");
+                        }
 
-                        DiscriptionTextBox.Clear();
+                        DescriptionTextBox.Clear();
                     }
                     else
                     {
@@ -194,6 +188,42 @@ namespace TaskManager.TaskManagerPanel
             {
                 MessageBox.Show($"Произошла ошибка: {ex.Message}");
             }
+        }
+
+        private void OpenModelAtCoordinates(Task task)
+        {
+            if (_commandData == null)
+            {
+                MessageBox.Show("Ошибка в CommandData. Вероятнее всего он равен null");
+                return;
+            }
+
+            openViewHandler.taskInfo = task;
+            openViewEvent.Raise();
+        }
+
+        private void ViewScreenshot(object sender, RoutedEventArgs e)
+        {
+            System.Windows.Controls.Button button = sender as System.Windows.Controls.Button;
+            BitmapImage screenshot = button.Tag as BitmapImage;
+
+            if (screenshot != null)
+            {
+                Window window = new Window
+                {
+                    Title = "Скриншот",
+                    Content = new System.Windows.Controls.Image { Source = screenshot, Stretch = Stretch.Uniform },
+                    Width = screenshot.Width,
+                    Height = screenshot.Height,
+                };
+                window.ShowDialog();
+            }
+
+        }
+
+        private ViewModel GetPrintScreen()
+        {
+            return new ViewModel();
         }
 
         private double GetZoomLevel(ViewPlan view)
@@ -294,17 +324,7 @@ namespace TaskManager.TaskManagerPanel
         }
 
 
-        private void OpenModelAtCoordinates(ViewModel screenshotInfo)
-        {
-            if (_commandData == null)
-            {
-                MessageBox.Show("Ошибка в CommandData. Вероятнее всего он равен null");
-                return;
-            }
-
-            openViewHandler.ScreenshotInfo = screenshotInfo;
-            openViewEvent.Raise();
-        }
+        
 
 
         private void ShowModelCoordinates(object sender, RoutedEventArgs e)
@@ -401,6 +421,8 @@ namespace TaskManager.TaskManagerPanel
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
+        
 
+        
     }
 }
