@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Forms;
+using System.Windows.Interop;
 using TaskManager.TaskManagerPanel;
 using MessageBox = System.Windows.Forms.MessageBox;
 
@@ -77,8 +78,8 @@ namespace TaskManager.Handlers
             Window overlayWindow = new Window
             {
                 Title = "Canvas Overlay",
-                Width = screenshotInfo.Image.PixelWidth,
-                Height = screenshotInfo.Image.PixelHeight,
+                Width = screenshotInfo.InkCanvasImage.PixelWidth,
+                Height = screenshotInfo.InkCanvasImage.PixelHeight,
                 WindowStyle = WindowStyle.None,
                 AllowsTransparency = true,
                 Background = System.Windows.Media.Brushes.Transparent,
@@ -89,16 +90,16 @@ namespace TaskManager.Handlers
 
             Canvas canvas = new Canvas
             {
-                Width = screenshotInfo.Image.PixelWidth,
-                Height = screenshotInfo.Image.PixelHeight,
+                Width = screenshotInfo.InkCanvasImage.PixelWidth,
+                Height = screenshotInfo.InkCanvasImage.PixelHeight,
                 Background = System.Windows.Media.Brushes.Transparent
             };
 
             System.Windows.Controls.Image image = new System.Windows.Controls.Image
             {
-                Source = screenshotInfo.Image,
-                Width = screenshotInfo.Image.PixelWidth,
-                Height = screenshotInfo.Image.PixelHeight
+                Source = screenshotInfo.InkCanvasImage,
+                Width = screenshotInfo.InkCanvasImage.PixelWidth,
+                Height = screenshotInfo.InkCanvasImage.PixelHeight
             };
 
             Canvas.SetLeft(image, 0);
@@ -115,11 +116,14 @@ namespace TaskManager.Handlers
             overlayWindow.Left = revitWindowRect.Left + screenshotInfo.StartPoint.X;
             overlayWindow.Top = revitWindowRect.Top + screenshotInfo.StartPoint.Y;
 
-            overlayWindow.MouseLeftButtonDown += (s, e) => overlayWindow.DragMove();
-            overlayWindow.MouseRightButtonDown += (s, e) => overlayWindow.Close();
+            overlayWindow.MouseLeftButtonDown += (s, e) => overlayWindow.Close();
 
             overlayWindow.Show();
         }
+
+
+
+
 
         // Структура RECT для хранения координат прямоугольника окна
         [Serializable]

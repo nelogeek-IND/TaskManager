@@ -112,10 +112,6 @@ namespace TaskManager.TaskManagerPanel
                         var revitStartPointCoordinates = new System.Windows.Point(revitWindowRect.Left, revitWindowRect.Top);
                         var revitEndPointCoordinates = new System.Windows.Point(revitWindowRect.Right, revitWindowRect.Bottom);
 
-                        // Переводим точки начала и конца в координаты Revit
-                        XYZ revitStartPoint = ConvertScreenPointToModelPoint(startPoint);
-                        XYZ revitEndPoint = ConvertScreenPointToModelPoint(endPoint);
-
                         UIDocument uidoc = _commandData.Application.ActiveUIDocument;
 
                         Autodesk.Revit.DB.ViewPlan view = uidoc.ActiveGraphicalView as ViewPlan;
@@ -148,7 +144,6 @@ namespace TaskManager.TaskManagerPanel
                             Description = description,
                             StartPoint = startPoint,
                             EndPoint = endPoint,
-                            RevitWindowCoordinates = revitStartPointCoordinates, //GetCoordinatesFromRevit(startPoint),
                             RevitStartPointCoordinates = lowerLeft,
                             RevitEndPointCoordinates = upperRight,
                             Scale = GetCurrentScale(),
@@ -312,57 +307,6 @@ namespace TaskManager.TaskManagerPanel
         }
 
 
-
-        private void ShowCanvasWithImage(ViewModel screenshotInfo)
-        {
-            Window overlayWindow = new Window
-            {
-                Title = "Canvas Overlay",
-                Width = screenshotInfo.Image.PixelWidth,
-                Height = screenshotInfo.Image.PixelHeight,
-                WindowStyle = WindowStyle.None,
-                AllowsTransparency = true,
-                Background = System.Windows.Media.Brushes.Transparent,
-                Topmost = true,
-                ShowInTaskbar = false,
-                Opacity = 0.8
-            };
-
-            Canvas canvas = new Canvas
-            {
-                Width = screenshotInfo.Image.PixelWidth,
-                Height = screenshotInfo.Image.PixelHeight,
-                Background = System.Windows.Media.Brushes.Transparent
-            };
-
-            System.Windows.Controls.Image image = new System.Windows.Controls.Image
-            {
-                Source = screenshotInfo.Image,
-                Width = screenshotInfo.Image.PixelWidth,
-                Height = screenshotInfo.Image.PixelHeight
-            };
-
-            Canvas.SetLeft(image, 0);
-            Canvas.SetTop(image, 0);
-            canvas.Children.Add(image);
-
-            overlayWindow.Content = canvas;
-
-            // Получаем координаты окна Revit
-            IntPtr revitHandle = Process.GetCurrentProcess().MainWindowHandle;
-            GetWindowRect(revitHandle, out RECT revitWindowRect);
-
-            // Устанавливаем позицию нового окна относительно координат, где был сделан скриншот
-            overlayWindow.Left = revitWindowRect.Left + screenshotInfo.StartPoint.X;
-            overlayWindow.Top = revitWindowRect.Top + screenshotInfo.StartPoint.Y;
-
-            overlayWindow.MouseLeftButtonDown += (s, e) => overlayWindow.DragMove();
-            overlayWindow.MouseRightButtonDown += (s, e) => overlayWindow.Close();
-
-            overlayWindow.Show();
-        }
-
-
         private void ShowModelCoordinates(object sender, RoutedEventArgs e)
         {
             try
@@ -406,33 +350,6 @@ namespace TaskManager.TaskManagerPanel
             }
         }
 
-        private XYZ ConvertScreenPointToModelPoint(System.Windows.Point screenPoint)
-        {
-            UIDocument uidoc = _commandData.Application.ActiveUIDocument;
-            Document doc = uidoc.Document;
-            Autodesk.Revit.DB.View view = uidoc.ActiveGraphicalView;
-
-            // Симулируем клик по экрану
-            SimulateClick(screenPoint);
-
-            // Получаем координаты модели
-            XYZ pointInModel = null;
-
-            try
-            {
-                // Выбираем точку на экране
-                XYZ pointOnScreen = uidoc.Selection.PickPoint(ObjectSnapTypes.Intersections);
-
-                // Преобразуем пиксельные координаты в координаты модели
-                pointInModel = view.CropBox.Transform.OfPoint(pointOnScreen);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Произошла ошибка при выборе точки: {ex.Message}");
-            }
-
-            return pointInModel;
-        }
 
         [DllImport("user32.dll")]
         static extern bool SetCursorPos(int X, int Y);
