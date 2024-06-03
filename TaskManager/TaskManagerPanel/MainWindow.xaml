@@ -12,47 +12,45 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/TaskManager;component/dLabStyle.xaml"/>
             </ResourceDictionary.MergedDictionaries>
-            <DataTemplate x:Key="ScreenshotTemplate">
-                <Grid Margin="0,10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <Image Grid.Column="0" Source="{Binding ImageSource}" Width="100" Height="100" Stretch="Uniform"/>
-                    <TextBox Grid.Column="1" Text="{Binding Description}" VerticalAlignment="Center" Margin="10,0"/>
-                </Grid>
+            <DataTemplate x:Key="TaskTemplate">
+                <Expander Margin="0,10" Header="{Binding TaskName}">
+                    <StackPanel>
+                        <TextBlock Text="Имя создавшего задачу:" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding CreatorName}" Margin="10,0,0,5"/>
+                        <TextBlock Text="Дата создания:" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding CreationDate}" Margin="10,0,0,5"/>
+                        <TextBlock Text="Описание задачи:" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding Description}" Margin="10,0,0,5"/>
+                        <Button Click="ViewScreenshot" Content="Посмотреть скрин" Tag="{Binding Screenshot}" Width="150"/>
+                    </StackPanel>
+                </Expander>
             </DataTemplate>
         </ResourceDictionary>
     </Page.Resources>
 
-    <Grid>
+    <Grid Background="White">
         <Grid.RowDefinitions>
-            <RowDefinition Height="auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <Border Style="{DynamicResource ContentBorder}" Padding="25,0,25,10" Grid.Row="1">
-            <Grid>
-                <TextBlock x:Name="LabelPanel" Style="{DynamicResource BlockHeader}" Margin="0,15,0,0" d:Text="TASK MANAGER" VerticalAlignment="Top"/>
+        <!-- Аватарка и имя пользователя -->
+        <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="10" Background="White">
+            <Border Width="50" Height="50" Background="Gray"  Margin="0,0,10,0">
+                <Image x:Name="UserAvatar" Source="{Binding UserAvatar}" Width="50" Height="50" Margin="0,0,10,0"/>
+            </Border>
+            <TextBlock x:Name="UserNameTextBlock" Text="{Binding UserName}" VerticalAlignment="Center" FontSize="16" FontWeight="Bold"/>
+        </StackPanel>
 
-                <Button Padding="8"  Click="PrintScreen" VerticalAlignment="Top" Content="Add task" HorizontalAlignment="Center" Margin="0,97,0,0"/>
-                <TextBox x:Name="DiscriptionTextBox"  Margin="0,46,0,0" ToolTip="Description" TextChanged="TextBox_TextChanged" Height="40" VerticalAlignment="Top" Background="#FFF11A1A"/>
-                <StackPanel x:Name="ScreenshotsContainer" Margin="0,97,0,0"/>
-                <Grid x:Name="ReaderView" Visibility="Visible" Margin="0,136,0,0">
-                    <FlowDocumentReader x:Name="FlowDocReader" Margin="0,23,0,0">
-                        <FlowDocumentReader.Resources>
-                            <Style TargetType="Paragraph">
-                                <Setter Property="Foreground" Value="{StaticResource Bold}"/>
-                                <Setter Property="FontSize" Value="12"/>
-                                <Setter Property="FontFamily" Value="{StaticResource ApercuMono}"/>
-                            </Style>
-                        </FlowDocumentReader.Resources>
-                        <FlowDocumentReader.Document>
-                            <Binding Path="flowdocument"/>
-                        </FlowDocumentReader.Document>
-                    </FlowDocumentReader>
-                </Grid>
-            </Grid>
-        </Border>
+        <!-- Поле для ввода описания -->
+        <TextBox x:Name="DescriptionTextBox" Width="300" Height="40" Margin="10" Grid.Row="1" VerticalAlignment="Top" TextWrapping="Wrap" AcceptsReturn="True"/>
+
+        <!-- Кнопка Add Task -->
+        <Button Content="Add Task" Click="AddTask" Padding="5" Width="100" Height="33" Grid.Row="2" HorizontalAlignment="Center" Margin="5" Background="White"/>
+
+        <!-- Список задач -->
+        <ItemsControl x:Name="TasksPanel" Grid.Row="3" ItemsSource="{Binding Tasks}" ItemTemplate="{StaticResource TaskTemplate}" />
     </Grid>
 </Page>

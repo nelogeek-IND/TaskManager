@@ -54,11 +54,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App.cs" />
-    <Compile Include="Command.cs" />
-    <Compile Include="Helpers\CaptureWindow.cs" />
+    <Compile Include="Handlers\OpenViewEventHandler.cs" />
     <Compile Include="Helpers\CaptureWindow.xaml.cs">
       <DependentUpon>CaptureWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Shared\RevitCoordinateConverter.cs" />
+    <Compile Include="TaskManagerPanel\ViewModel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Shared\CaseConverter.cs" />
     <Compile Include="Shared\RelayCommand.cs" />
@@ -68,7 +69,6 @@
     <Compile Include="TaskManagerPanel\MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="TaskManagerPanel\ViewModel.cs" />
   </ItemGroup>
   <ItemGroup>
     <Page Include="dLabStyle.xaml">

@@ -39,7 +39,7 @@ namespace TaskManager.Helpers
             inkCanvas = new InkCanvas
             {
                 Visibility = Visibility.Collapsed,
-                Background = Brushes.Transparent, // TODO изменить на Transparent
+                Background = Brushes.Transparent, 
                 
                 DefaultDrawingAttributes = new DrawingAttributes
                 {
@@ -132,9 +132,6 @@ namespace TaskManager.Helpers
                 return;
 
             EndPoint = e.GetPosition(this);
-            //EndPoint.X -= GetRevitWindowOffset().X;
-            //EndPoint.Y -= GetRevitWindowOffset().Y;
-
             StartPoint = startPoint;
         }
         

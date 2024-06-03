@@ -1,42 +1,39 @@
-﻿using Autodesk.Revit.UI;
+﻿using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
+using Autodesk.Revit.UI;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
 
 namespace TaskManager.TaskManagerPanel
 {
-    [Autodesk.Revit.Attributes.Transaction(Autodesk.Revit.Attributes.TransactionMode.Manual)]
-    class Command : IExternalCommand
+    [Transaction(TransactionMode.Manual)]
+    public class Command : IExternalCommand
     {
-        public Result Execute(ExternalCommandData revit, ref string message, ElementSet elements)
+        public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
-            UIApplication uiapp = revit.Application;
-            UIDocument uidoc = uiapp.ActiveUIDocument;
-            Document doc = uidoc.Document;
             try
             {
-                if (revit.Application.GetDockablePane(App.TaskManagerPanel) is DockablePane pane)
+                DockablePaneId paneId = App.TaskManagerPanel;
+                DockablePane pane = commandData.Application.GetDockablePane(paneId);
+
+                // Обновление commandData в MainWindow
+                App.UpdateMainWindowCommandData(commandData);
+
+                if (pane.IsShown())
                 {
-                    if (pane.IsShown())
-                    {
-                        pane.Hide();
-                    }
-                    else
-                    {
-                        pane.Show();
-                    }
+                    pane.Hide();
                 }
                 else
                 {
-                    throw new Exception("Can't find StempsHelp pane!");
+                    pane.Show();
                 }
+
+                return Result.Succeeded;
             }
-            catch (Exception ex) { }
-            return Result.Succeeded;
+            catch (Exception ex)
+            {
+                message = ex.Message;
+                return Result.Failed;
+            }
         }
     }
 }
