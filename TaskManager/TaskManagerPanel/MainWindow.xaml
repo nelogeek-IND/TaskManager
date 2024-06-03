@@ -14,14 +14,14 @@
             </ResourceDictionary.MergedDictionaries>
             <DataTemplate x:Key="TaskTemplate">
                 <Expander Margin="0,10" Header="{Binding TaskName}">
-                    <StackPanel x:Name="TasksPanel">
+                    <StackPanel>
                         <TextBlock Text="Имя создавшего задачу:" FontWeight="Bold"/>
                         <TextBlock Text="{Binding CreatorName}" Margin="10,0,0,5"/>
                         <TextBlock Text="Дата создания:" FontWeight="Bold"/>
                         <TextBlock Text="{Binding CreationDate}" Margin="10,0,0,5"/>
                         <TextBlock Text="Описание задачи:" FontWeight="Bold"/>
                         <TextBlock Text="{Binding Description}" Margin="10,0,0,5"/>
-                        <Button Content="Посмотреть скрин" Click="ViewScreenshot" Tag="{Binding Screenshot}" Width="150"/>
+                        <Button Click="ViewScreenshot" Content="Посмотреть скрин" Tag="{Binding Screenshot}" Width="150"/>
                     </StackPanel>
                 </Expander>
             </DataTemplate>
@@ -51,6 +51,6 @@
         <Button Content="Add Task" Click="AddTask" Padding="5" Width="100" Height="33" Grid.Row="2" HorizontalAlignment="Center" Margin="5" Background="White"/>
 
         <!-- Список задач -->
-        <ItemsControl Grid.Row="3" ItemsSource="{Binding Tasks}" ItemTemplate="{StaticResource TaskTemplate}" />
+        <ItemsControl x:Name="TasksPanel" Grid.Row="3" ItemsSource="{Binding Tasks}" ItemTemplate="{StaticResource TaskTemplate}" />
     </Grid>
 </Page>

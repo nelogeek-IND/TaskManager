@@ -34,13 +34,14 @@ namespace TaskManager.TaskManagerPanel
         public string CreationDate { get; set; }
         public string Description { get; set; }
         public BitmapImage Screenshot { get; set; }
+        public BitmapImage InkImage { get; set; }
 
         // Добавляем свойства для сохранения информации о виде
+        public System.Windows.Point StartPointImg { get; set; }
+        public System.Windows.Point EndtPointImg { get; set; }
         public XYZ RevitStartPointCoordinates { get; set; }
         public XYZ RevitEndPointCoordinates { get; set; }
         public ElementId ViewId { get; set; }
-        public XYZ CenterPoint { get; set; }
         public double Scale { get; set; }
-        public double Zoom { get; set; }
     }
 }

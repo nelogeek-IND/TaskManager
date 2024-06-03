@@ -15,7 +15,7 @@ namespace TaskManager.Handlers
 {
     public class OpenViewEventHandler : IExternalEventHandler
     {
-        public Task taskInfo { get; set; }
+        public Task task { get; set; }
 
         public void Execute(UIApplication app)
         {
@@ -25,7 +25,7 @@ namespace TaskManager.Handlers
             try
             {
                 // Переключаемся на сохраненный вид
-                Autodesk.Revit.DB.View view = doc.GetElement(taskInfo.ViewId) as Autodesk.Revit.DB.View;
+                Autodesk.Revit.DB.View view = doc.GetElement(task.ViewId) as Autodesk.Revit.DB.View;
                 if (view != null)
                 {
                     uidoc.ActiveView = view;
@@ -34,19 +34,19 @@ namespace TaskManager.Handlers
                     using (Transaction transaction = new Transaction(doc, "Установка масштаба"))
                     {
                         transaction.Start();
-                        view.Scale = (int)taskInfo.Scale;
+                        view.Scale = (int)task.Scale;
                         transaction.Commit();
                     }
 
                     // Фокусируемся на сохраненной области
-                    XYZ minPoint = taskInfo.RevitStartPointCoordinates;
-                    XYZ maxPoint = taskInfo.RevitEndPointCoordinates;
+                    XYZ minPoint = task.RevitStartPointCoordinates;
+                    XYZ maxPoint = task.RevitEndPointCoordinates;
 
                     // Используем метод ZoomAndCenterRectangle для масштабирования и центровки области
                     uidoc.GetOpenUIViews().FirstOrDefault(uiView => uiView.ViewId == view.Id)?.ZoomAndCenterRectangle(minPoint, maxPoint);
 
-                    //// Показать скриншот как оверлей
-                    //ShowCanvasWithImage(taskInfo);
+                    // Показать скриншот как оверлей
+                    ShowCanvasWithImage(task);
                 }
                 else
                 {
@@ -64,53 +64,65 @@ namespace TaskManager.Handlers
             return "Open View Event Handler";
         }
 
-        //private void ShowCanvasWithImage(ViewModel screenshotInfo)
-        //{
-        //    Window overlayWindow = new Window
-        //    {
-        //        Title = "Canvas Overlay",
-        //        Width = screenshotInfo.InkCanvasImage.PixelWidth,
-        //        Height = screenshotInfo.InkCanvasImage.PixelHeight,
-        //        WindowStyle = WindowStyle.None,
-        //        AllowsTransparency = true,
-        //        Background = System.Windows.Media.Brushes.Transparent,
-        //        Topmost = true,
-        //        ShowInTaskbar = false,
-        //        Opacity = 0.8
-        //    };
+        private void ShowCanvasWithImage(Task task)
+        {
+            Window overlayWindow = new Window
+            {
+                Title = "Canvas Overlay",
+                Width = task.InkImage.PixelWidth,
+                Height = task.InkImage.PixelHeight,
+                WindowStyle = WindowStyle.None,
+                AllowsTransparency = true,
+                Background = System.Windows.Media.Brushes.Transparent,
+                Topmost = true,
+                ShowInTaskbar = false,
+                Opacity = 0.8
+            };
 
-        //    Canvas canvas = new Canvas
-        //    {
-        //        Width = screenshotInfo.InkCanvasImage.PixelWidth,
-        //        Height = screenshotInfo.InkCanvasImage.PixelHeight,
-        //        Background = System.Windows.Media.Brushes.Transparent
-        //    };
+            Canvas canvas = new Canvas
+            {
+                Width = task.InkImage.PixelWidth,
+                Height = task.InkImage.PixelHeight,
+                Background = System.Windows.Media.Brushes.Transparent
+            };
 
-        //    System.Windows.Controls.Image image = new System.Windows.Controls.Image
-        //    {
-        //        Source = screenshotInfo.InkCanvasImage,
-        //        Width = screenshotInfo.InkCanvasImage.PixelWidth,
-        //        Height = screenshotInfo.InkCanvasImage.PixelHeight
-        //    };
+            System.Windows.Controls.Image image = new System.Windows.Controls.Image
+            {
+                Source = task.InkImage,
+                Width = task.InkImage.PixelWidth,
+                Height = task.InkImage.PixelHeight
+            };
 
-        //    Canvas.SetLeft(image, 0);
-        //    Canvas.SetTop(image, 0);
-        //    canvas.Children.Add(image);
+            Canvas.SetLeft(image, 0);
+            Canvas.SetTop(image, 0);
+            canvas.Children.Add(image);
 
-        //    overlayWindow.Content = canvas;
+            overlayWindow.Content = canvas;
 
-        //    // Получаем координаты окна Revit
-        //    IntPtr revitHandle = Process.GetCurrentProcess().MainWindowHandle;
-        //    GetWindowRect(revitHandle, out RECT revitWindowRect);
+            // Получаем координаты окна Revit
+            IntPtr revitHandle = Process.GetCurrentProcess().MainWindowHandle;
+            GetWindowRect(revitHandle, out RECT revitWindowRect);
 
-        //    // Устанавливаем позицию нового окна относительно координат, где был сделан скриншот
-        //    overlayWindow.Left = revitWindowRect.Left + screenshotInfo.StartPoint.X;
-        //    overlayWindow.Top = revitWindowRect.Top + screenshotInfo.StartPoint.Y;
+            // Устанавливаем позицию нового окна относительно координат, где был сделан скриншот
+            overlayWindow.Left = revitWindowRect.Left + task.StartPointImg.X + 8;
+            overlayWindow.Top = revitWindowRect.Top + task.StartPointImg.Y + 8;
 
-        //    overlayWindow.MouseLeftButtonDown += (s, e) => overlayWindow.Close();
+            overlayWindow.MouseLeftButtonDown += (s, e) => overlayWindow.Close();
 
-        //    overlayWindow.Show();
-        //}
+            // Создаем и запускаем таймер на 5 секунд
+            var timer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(15)
+            };
+            timer.Tick += (s, e) =>
+            {
+                overlayWindow.Close();
+                timer.Stop(); // Останавливаем таймер после его срабатывания
+            };
+            timer.Start();
+
+            overlayWindow.Show();
+        }
 
 
 

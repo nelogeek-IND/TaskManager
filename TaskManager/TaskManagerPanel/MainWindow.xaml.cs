@@ -18,6 +18,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using TaskManager.Handlers;
 using TaskManager.Helpers;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.TrackBar;
 using static TaskManager.Helpers.CaptureWindow;
 using static TaskManager.TaskManagerPanel.MainWindow;
@@ -28,7 +29,7 @@ using Transform = Autodesk.Revit.DB.Transform;
 namespace TaskManager.TaskManagerPanel
 {
 
-    public partial class MainWindow : Page, IDockablePaneProvider
+    public partial class MainWindow : System.Windows.Controls.Page, IDockablePaneProvider
     {
         private List<Task> tasks = new List<Task>();
         private ExternalCommandData _commandData;
@@ -140,9 +141,6 @@ namespace TaskManager.TaskManagerPanel
 
                         ElementId viewId = view.Id;  // Получаем идентификатор активного вида
 
-                        XYZ viewCenter = view.Origin;  // Центр вида
-
-                        double zoomLevel = GetZoomLevel(view);
 
                         // Создаем новый объект Task и добавляем его в коллекцию задач
                         var newTask = new Task
@@ -152,12 +150,13 @@ namespace TaskManager.TaskManagerPanel
                             CreationDate = DateTime.Now.ToString("dd.MM.yyyy"),
                             Description = description,
                             Screenshot = bitmapImage,
+                            InkImage = inkCanvasImage,
+                            StartPointImg = startPoint,
+                            EndtPointImg = endPoint,
                             RevitStartPointCoordinates = lowerLeft,
                             RevitEndPointCoordinates = upperRight,
                             ViewId = viewId,
-                            CenterPoint = viewCenter,
                             Scale = GetCurrentScale(),
-                            Zoom = zoomLevel
                         };
 
                         tasks.Add(newTask);  // Добавляем задачу в локальный список
@@ -190,7 +189,7 @@ namespace TaskManager.TaskManagerPanel
             }
         }
 
-        private void OpenModelAtCoordinates(Task task)
+        private void OpenModelInRevit(Task task)
         {
             if (_commandData == null)
             {
@@ -198,72 +197,38 @@ namespace TaskManager.TaskManagerPanel
                 return;
             }
 
-            openViewHandler.taskInfo = task;
+            openViewHandler.task = task;
             openViewEvent.Raise();
         }
 
         private void ViewScreenshot(object sender, RoutedEventArgs e)
         {
             System.Windows.Controls.Button button = sender as System.Windows.Controls.Button;
-            BitmapImage screenshot = button.Tag as BitmapImage;
 
-            if (screenshot != null)
+
+
+            // Открывает скрин в окне
+            //BitmapImage screenshot = button.Tag as BitmapImage;
+
+            //if (screenshot != null)
+            //{
+            //    System.Windows.Window window = new System.Windows.Window
+            //    {
+            //        Title = "Скриншот",
+            //        Content = new System.Windows.Controls.Image { Source = screenshot, Stretch = Stretch.Uniform },
+            //        Width = screenshot.Width,
+            //        Height = screenshot.Height,
+            //    };
+            //    window.Show();
+            //}
+
+            Task task = button?.DataContext as Task;
+            if (task != null)
             {
-                Window window = new Window
-                {
-                    Title = "Скриншот",
-                    Content = new System.Windows.Controls.Image { Source = screenshot, Stretch = Stretch.Uniform },
-                    Width = screenshot.Width,
-                    Height = screenshot.Height,
-                };
-                window.ShowDialog();
+                OpenModelInRevit(task);
             }
-
         }
 
-        private ViewModel GetPrintScreen()
-        {
-            return new ViewModel();
-        }
-
-        private double GetZoomLevel(ViewPlan view)
-        {
-            // Проверка, что переданный вид - это план этажа
-            if (view == null)
-                throw new ArgumentNullException(nameof(view));
-
-            UIDocument uidoc = _commandData.Application.ActiveUIDocument;
-            Document doc = uidoc.Document;
-
-            // Получаем размеры окна Revit
-            Autodesk.Revit.DB.Rectangle revitRect = uidoc.GetOpenUIViews().FirstOrDefault(uiv => uiv.ViewId == view.Id)?.GetWindowRectangle();
-            if (revitRect == null)
-                throw new InvalidOperationException("Не удалось получить размеры окна Revit для текущего вида.");
-
-            // Преобразуем Autodesk.Revit.DB.Rectangle в System.Drawing.Rectangle
-            System.Drawing.Rectangle viewRect = new System.Drawing.Rectangle(revitRect.Left, revitRect.Top, revitRect.Right - revitRect.Left, revitRect.Bottom - revitRect.Top);
-
-            double windowWidth = viewRect.Width;
-            double windowHeight = viewRect.Height;
-
-            // Получаем границы вида
-            BoundingBoxXYZ boundingBox = view.get_BoundingBox(null);
-            double viewWidth = boundingBox.Max.X - boundingBox.Min.X;
-            double viewHeight = boundingBox.Max.Y - boundingBox.Min.Y;
-
-            // Получаем масштаб аннотаций и текущий масштаб вида
-            double annotationScale = view.get_Parameter(BuiltInParameter.VIEW_SCALE_PULLDOWN_METRIC).AsDouble();
-            double viewScale = view.Scale;
-
-            // Рассчитываем текущий уровень зума как отношение размеров окна к размерам вида
-            double zoomLevelWidth = windowWidth / (viewWidth * viewScale / annotationScale);
-            double zoomLevelHeight = windowHeight / (viewHeight * viewScale / annotationScale);
-
-            // Возвращаем минимальное значение, чтобы соответствовать обоим осям
-            return Math.Min(zoomLevelWidth, zoomLevelHeight);
-        }
-
-        
 
 
 
@@ -324,52 +289,6 @@ namespace TaskManager.TaskManagerPanel
         }
 
 
-        
-
-
-        private void ShowModelCoordinates(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                UIDocument uidoc = _commandData.Application.ActiveUIDocument;
-                Document doc = uidoc.Document;
-
-                // Выбираем точку на экране
-                XYZ pickedPoint = uidoc.Selection.PickPoint("Выберите точку для получения координат");
-
-                // Получаем элемент, ближайший к этой точке
-                Reference pickedReference = uidoc.Selection.PickObject(ObjectType.Element, "Выберите объект для получения координат");
-                Element element = doc.GetElement(pickedReference);
-
-                // Получаем местоположение элемента
-                Location location = element.Location;
-                XYZ locationPoint = null;
-
-                if (location is LocationPoint locationPointElement)
-                {
-                    locationPoint = locationPointElement.Point;
-                }
-                else if (location is LocationCurve locationCurveElement)
-                {
-                    // Получаем среднюю точку кривой как местоположение объекта
-                    locationPoint = locationCurveElement.Curve.Evaluate(0.5, true);
-                }
-
-                if (locationPoint != null)
-                {
-                    MessageBox.Show($"Координаты объекта: X = {locationPoint.X}, Y = {locationPoint.Y}, Z = {locationPoint.Z}");
-                }
-                else
-                {
-                    MessageBox.Show("Не удалось определить координаты объекта.");
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Произошла ошибка: {ex.Message}");
-            }
-        }
-
 
         [DllImport("user32.dll")]
         static extern bool SetCursorPos(int X, int Y);
@@ -421,8 +340,8 @@ namespace TaskManager.TaskManagerPanel
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
-        
 
-        
+
+
     }
 }
